@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "drfx-admin",
+  "main": "dist/worker.mjs",
+  "compatibility_date": "2026-10-20",
+  "ai": { "binding": "AI" },
+  "images": { "binding": "IMAGES" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "REPLACE_WITH_D1_DATABASE_NAME",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID"
+    }
+  ],
+  "vars": {
+    "BRAND_NAME": "DR FX AI",
+    "BRAND_HANDLE": "",
+    "BRAND_WEBSITE": "https://drfx.company",
+    "PUBLIC_URL": "https://REPLACE_WITH_YOUR_WORKER_URL"
+  }
+}
