@@ -19,7 +19,7 @@ let busy=false,toastTimer,inboxMode='fast',proPanel='content',proQueueOpen=false
 const fastMode=createFastMode({
  el,state,selected,esc,toast,isBusy:()=>busy,refresh:()=>load(),
  goPro:(id,panel)=>{if(hasUnsavedDraft()){toast('ابتدا تغییرات متن را ذخیره کنید.');return;}state.selected=id;setEdit(false);proQueueOpen=false;page('pro');setProPanel(panel||((state.items.find(x=>x.id===id)?.has_photo)?'media':'content'),{force:true});render();},
- publish:async(id)=>{await quickPublish(id);}
+ publish:async(id)=>{await quickPublish(id);},
  remove:async(id)=>{if(busy)return;state.selected=id;await delSelected();},
 });
 function toast(text){const e=el('toast');e.textContent=text;e.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('show'),3300);}
