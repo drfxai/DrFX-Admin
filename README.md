@@ -94,3 +94,15 @@ The interface uses a charcoal / muted gold palette. Green is reserved for succes
 **No change to core publication permissions:** one-click publishing still uses the authenticated API, protects against duplicate posts, and validates active trade signals. Image publishing still requires a separately approved edited image. The **demo URL cannot publish messages**.
 
 Run `npm test` to validate the combined Worker and the user-interface contracts; build with `npm run build`. No new D1 tables, secrets or Telegram bot configuration are required.
+
+## v0.4.1 — UI polish (2026-11-10)
+
+- **Home** is shorter; its identity tile displays the actual message symbol/direction rather than a fictional chart.
+- The primary Home action adapts to the post state: publish eligible text, open media review, inspect failed delivery, or view a published post.
+- **Fast** cards are smaller and preserve strict qualification before one-click publishing.
+- **Pro** now has four focused stages (Content / Media / Identity & AI / Publish), a collapsible mobile message selector and a sticky publishing toolbar. Manual crop/mask controls remain under a disclosure.
+- Unsaved text edits block accidental tab or message changes.
+- Advanced Settings separate publication rules from AI and identity protection.
+- The Worker publishing backend and D1 schema are unchanged.
+
+Validation: run `npm test` and compare the generated `dist/worker.mjs` with the tracked artifact before deploying.

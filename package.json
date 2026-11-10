@@ -1,9 +1,9 @@
 {
   "name": "drfx-admin",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
-  "description": "Focused channel assistant for editing and publishing standardized content",
+  "description": "DrFX Admin channel assistant — streamlined Fast/Pro publishing workflow",
   "scripts": {
     "build": "node scripts/build.mjs",
     "check:bundle": "node scripts/build.mjs --check",
