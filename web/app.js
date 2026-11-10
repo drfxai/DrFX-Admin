@@ -10,8 +10,8 @@ const samples=[
  {id:102,content_type:'photo',has_photo:true,source_label:'Sample Channel',original_text:'XAUUSD BUY 3880 SL 3874 TP1 3888',draft_text:'✦ DR FX AI | PREMIUM SIGNALS\n\n📈 XAUUSD  •  🟢 BUY\n📍 Entry 3880\n🛑 SL 3874\n🎯 TP1 3888\n🌐 https://drfx.company\nSource: Sample Channel',ocr_text:'',status:'sent',created_at:1730500000,signal:{symbol:'XAUUSD',side:'BUY',entry:3880,sl:3874,tps:[3888],rr:1.33}},
  {id:101,content_type:'text',has_photo:false,source_label:'Demo Feed',original_text:'Gold sell 3917 SL 3924 TP1 3909',draft_text:'✦ DR FX AI | PREMIUM SIGNALS\n\n📈 XAUUSD  •  🔴 SELL\n📍 Entry 3917\n🛑 SL 3924\n🎯 TP1 3909\n🌐 https://drfx.company\nSource: Demo Feed',ocr_text:'',status:'sent',created_at:1730499000,signal:{symbol:'XAUUSD',side:'SELL',entry:3917,sl:3924,tps:[3909],rr:1.14}}
 ];
-const state={items:[],selected:null,filter:'all',page:'fast',isEditing:false,settings:{brandName:'DR FX AI',website:'https://drfx.company',handle:'',watermark:true,photoMode:'watermark',autoPublish:true,authorized:false,channelConfigured:true,scanDepth:'balanced',identityGuard:true}};
-let busy=false,toastTimer;
+const state={items:[],selected:null,filter:'all',page:'home',isEditing:false,settings:{brandName:'DR FX AI',website:'https://drfx.company',handle:'',watermark:true,photoMode:'watermark',autoPublish:true,authorized:false,channelConfigured:true,scanDepth:'balanced',identityGuard:true}};
+let busy=false,toastTimer,inboxMode='fast';
 const fastMode=createFastMode({
  el,state,selected,esc,toast,isBusy:()=>busy,refresh:()=>load(),
  goPro:(id)=>{state.selected=id;setEdit(false);page('pro');render();},
@@ -23,8 +23,8 @@ function initials(item){if(item.content_type==='photo')return '▧';return item.
 function statusFa(status){return ({review:'در انتظار',sent:'منتشر شده',sending:'در حال ارسال',failed:'خطای ارسال',rejected:'رد شده'})[status]||status;}
 function itemTitle(item){return item.signal?item.signal.symbol+'  •  '+item.signal.side:item.has_photo?'سیگنال تصویری':'پیام متنی';}
 function selected(){return state.items.find(x=>x.id===state.selected)||null;}
-function setBusy(v){busy=v;for(const id of ['ocrBtn','regenBtn','saveDraft','publishBtn','rejectBtn','confirmPublish'])el(id).disabled=v||(!selected()&&id!=='confirmPublish');}
-function updateTotals(){const total=state.items.length,sent=state.items.filter(x=>x.status==='sent').length,review=state.items.filter(x=>x.status==='review'||x.status==='failed').length,photos=state.items.filter(x=>x.has_photo).length;el('numTotal').textContent=total;el('numPending').textContent=review;el('numSent').textContent=sent;el('numPhotos').textContent=photos;el('sidePending').textContent=review;el('inboxCount').textContent=review+' نیازمند بررسی';}
+function setBusy(v){busy=v;for(const id of ['ocrBtn','regenBtn','saveDraft','publishBtn','rejectBtn','confirmPublish'])el(id).disabled=v||(!selected()&&id!=='confirmPublish');renderHome();}
+function updateTotals(){const total=state.items.length,sent=state.items.filter(x=>x.status==='sent').length,review=state.items.filter(x=>x.status==='review'||x.status==='failed').length,photos=state.items.filter(x=>x.has_photo).length;el('numTotal').textContent=total;el('numPending').textContent=review;el('numSent').textContent=sent;el('numPhotos').textContent=photos;el('sidePending').textContent=review;el('inboxCount').textContent=review+' نیازمند بررسی';if(el('mobilePending')){el('mobilePending').textContent=review;el('mobilePending').hidden=review===0;}}
 function renderList(){el('deleteAllBtn').disabled=busy||!state.items.length;const items=state.items.filter(i=>state.filter==='all'||(state.filter==='photo'?i.has_photo:state.filter==='review'?['review','failed'].includes(i.status):i.status===state.filter));const root=el('itemList');root.replaceChildren();if(!items.length){root.innerHTML='<div class="noitems"><div class="empty-icon">◌</div>پیامی در این بخش وجود ندارد.<br><small>سیگنال را برای ربات فوروارد کنید.</small></div>';return;}
  for(const x of items){const btn=document.createElement('button');btn.type='button';btn.className='item '+(x.id===state.selected?'selected':'');btn.innerHTML=`<span class="symbol ${x.has_photo?'photo':x.signal?.side==='BUY'?'buy':''}">${esc(initials(x))}</span><span class="item-body"><span class="item-top"><span dir="ltr">${esc(itemTitle(x))}</span><span class="status ${esc(x.status)}">${esc(statusFa(x.status)+(x.status==='sent'&&x.destination_message_id?' #'+x.destination_message_id:''))}</span></span><span class="item-bottom"><span>${esc(x.source_label||'بدون منبع')}</span><span>${x.has_photo?'◈ تصویر':'⌁ متن'}</span></span></span>`;btn.addEventListener('click',()=>{state.selected=x.id;setEdit(false);render();if(innerWidth<700)el('previewBox').scrollIntoView({behavior:'smooth',block:'center'});});root.append(btn);}}
 function setEdit(value){state.isEditing=value;el('previewBox').classList.toggle('editmode',value);el('tabEdit').classList.toggle('active',value);el('tabPreview').classList.toggle('active',!value);el('saveDraft').style.display=value?'inline-flex':'none';}
@@ -283,7 +283,7 @@ function openCommandInbox(reviewOnly){
  state.filter=reviewOnly?'review':'all';
  document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter===state.filter));
  if(reviewOnly){const first=state.items.find(x=>x.status==='review'||x.status==='failed');if(first)state.selected=first.id;}
- page('inbox');render();
+ page(reviewOnly?'pro':'inbox');render();
 }
 
 function renderIdentityAudit(){
@@ -310,12 +310,73 @@ function renderIdentityAudit(){
   note.textContent=scan?.scan_note||'در تصویر، اسکن AI ممکن است متن یا لوگو را از دست بدهد؛ تأیید تصویر قبل از انتشار ضروری است.';
  }else note.textContent=foreign.length?'شناسه‌های خارجی در پیام اصلی پیدا شدند؛ خروجی نهایی باید پاکسازی و قبل از انتشار کنترل شود.':'شناسه خارجی شناسایی نشده است؛ تشخیص خودکار کامل و قطعی نیست.';
 }
-function render(){renderCommandCenter();updateTotals();renderList();renderEditor();renderIdentityAudit();fastMode.render();}
-function page(name){if(!['fast','pro','dashboard','inbox','settings'].includes(name))return;state.page=name;document.body.dataset.workspace=name;for(const p of document.querySelectorAll('.page'))p.classList.toggle('active',p.id===name);for(const p of document.querySelectorAll('[data-page]'))p.classList.toggle('active',p.dataset.page===name);el('pageTitle').textContent=({fast:'Fast Signal Desk',pro:'Pro Signal Studio',dashboard:'مرکز فرمان سیگنال‌ها',inbox:'صندوق سیگنال‌ها',settings:'تنظیمات DR FX AI'})[name];el('workbench').style.display=['pro','inbox'].includes(name)?'grid':'none';el('tipline').style.display=['pro','inbox'].includes(name)?'flex':'none';if(name==='pro'||name==='inbox')window.scrollTo({top:0,behavior:'smooth'});}
+function homeItem(){return state.items.find(x=>x.status==='review')||state.items.find(x=>x.status==='failed')||state.items[0]||null;}
+function homeCanPublish(x){return !!x&&x.status==='review'&&!x.has_photo&&!!x.signal&&!state.settings.emergencyStop&&!busy;}
+function setConnection(status){
+ const target=el('connectionText');if(!target)return;
+ target.textContent=({ready:'پنل متصل',demo:'پیش‌نمایش',locked:'ورود از تلگرام',error:'اتصال ناموفق',loading:'در حال اتصال'})[status]||status;
+ el('headerConnection').dataset.status=status;
+}
+function renderHome(){
+ const x=homeItem();
+ if(!el('homeSymbol'))return;
+ const pending=state.items.filter(i=>['review','failed'].includes(i.status)).length;
+ el('homeQueueStatus').textContent=state.settings.emergencyStop?'انتشار متوقف است':pending?pending+' پیام نیازمند بررسی':'صندوق آماده است';
+ el('homeQueueCaption').textContent=demo?'حالت نمایشی · انتشار واقعی ندارد':pending?'در انتظار تصمیم شما':'برای دریافت پیام جدید';
+ el('homeItemId').textContent=x?'#'+x.id:'—';
+ el('homeItemState').textContent=x?statusFa(x.status):'بدون پیام';
+ el('homeItemState').dataset.status=x?.status||'empty';
+ const ago=x?.created_at?Math.max(0,Math.floor((Date.now()-Number(x.created_at)*1000)/60000)):null;
+ el('homeItemAge').textContent=!x?'—':demo?'نمونه نمایشی':ago<1?'همین الان':ago<60?ago+' دقیقه پیش':ago<1440?Math.floor(ago/60)+' ساعت پیش':'پیام اخیر';
+ el('homeSymbol').textContent=x?.signal?.symbol|| (x?.has_photo?'پیام تصویری':x?'پیام دریافتی':'منتظر دریافت پیام');
+ const side=el('homeSide');side.textContent=x?.signal?.side|| (x?.has_photo?'IMAGE':'REVIEW');side.dataset.side=x?.signal?.side||'OTHER';
+ el('homeEntry').textContent=x?.signal?.entryZone||x?.signal?.entry||'—';
+ el('homeStop').textContent=x?.signal?.sl||'—';
+ const targets=el('homeTargets');targets.replaceChildren();
+ if(x?.signal?.tps?.some(Number.isFinite)){
+  for(const [i,price] of x.signal.tps.entries()){
+   if(!Number.isFinite(price))continue;
+   const t=document.createElement('div'),label=document.createElement('span'),number=document.createElement('strong');
+   label.textContent='TP'+(i+1);number.textContent=String(price);t.append(label,number);targets.append(t);
+  }
+ }else{const t=document.createElement('span');t.textContent='اطلاعات تارگت در دسترس نیست';targets.append(t);}
+ el('homeExcerpt').textContent=String(x?.draft_text||x?.original_text||'برای شروع یک پیام را به ربات ارسال کنید.').slice(0,380);
+ const risk=el('homeSafety');risk.dataset.level=!x?'idle':x.status==='failed'?'error':x.has_photo?'review':x.signal?'ready':'review';
+ el('homeSafetyText').textContent=!x?'دستیار آماده دریافت پیام است.':x.status==='sent'?'این پیام قبلاً منتشر شده است.':x.status==='failed'?'وضعیت ارسال نیازمند بررسی در Pro است.':x.has_photo?'تصویر پیش از انتشار به تأیید دستی نیاز دارد.':x.signal?'فیلدهای معاملاتی تشخیص داده شده‌اند؛ پیش از انتشار بررسی کنید.':'پیام باید در بخش Pro بازبینی شود.';
+ const can=homeCanPublish(x),publish=el('homePublish');
+ publish.disabled=!x||busy||x.status==='sent'||x.status==='sending'||state.settings.emergencyStop;
+ publish.textContent=!x?'↗ انتشار':can?'↗ انتشار':x?.has_photo?'◉ بازبینی تصویر':'◉ بررسی در Pro';
+ el('homeEdit').disabled=!x||busy;
+ el('homePreview').disabled=!x||busy;
+ el('homeGuardTitle').textContent=state.settings.emergencyStop?'انتشار اضطراری متوقف است': 'کنترل محتوا فعال است';
+ el('homeGuardDetails').textContent= x?.has_photo?'OCR و پاکسازی تصویری تنها پس از تأیید شما قابل انتشارند.':'کنترل شناسه‌های خارجی و جلوگیری از انتشار تکراری فعال است.';
+}
+
+function render(){renderCommandCenter();updateTotals();renderList();renderEditor();renderIdentityAudit();fastMode.render();renderHome();}
+function page(input){
+ const name=input==='dashboard'?'home':input==='inbox'?inboxMode:input;
+ if(!['home','fast','pro','settings'].includes(name))return;
+ if(name==='fast'||name==='pro')inboxMode=name;
+ state.page=name;
+ document.body.dataset.workspace=name;
+ for(const p of document.querySelectorAll('.page'))p.classList.toggle('active',p.id===name);
+ for(const b of document.querySelectorAll('[data-page]')){
+  const dest=b.dataset.page;
+  const isNav=dest==='inbox'?(name==='fast'||name==='pro'):dest==='home'?name==='home':dest==='settings'?name==='settings':dest===name;
+  b.classList.toggle('active',isNav);
+  if(b.classList.contains('nav-btn')||b.closest('.bottomnav')){if(isNav)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');}
+ }
+ el('pageTitle').textContent=({home:'دستیار کانال',fast:'صندوق پیام‌ها',pro:'ویرایش حرفه‌ای',settings:'تنظیمات'})[name];
+ el('workbench').style.display=name==='pro'?'grid':'none';
+ el('tipline').style.display='none';
+ el('assistantModeSwitch').style.display=(name==='fast'||name==='pro')?'grid':'none';
+ if(name==='pro'||name==='fast')window.scrollTo({top:0,behavior:'smooth'});
+}
+
 async function api(path,{method='GET',body}={}){const res=await fetch(path,{method,headers:{'X-Telegram-Init-Data':telegram?.initData||'',...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});const data=await res.json().catch(()=>({error:'Invalid response'}));if(!res.ok)throw Error(data.error||'Connection failed');return data;}
-async function load(){if(demo){state.items=structuredClone(samples);state.selected=state.items[0].id;render();return;}
- if(!telegram?.initData){el('itemList').innerHTML='<div class="noitems">🔒<br>برای ورود امن، این پنل را از منوی ربات تلگرام باز کنید.<br><small>برای پیش‌نمایش ظاهری می‌توانید پارامتر ?demo=1 را به آدرس اضافه کنید.</small></div>';el('draftView').textContent='Access requires verified Telegram Mini App session.';return;}
- try{const data=await api('/api/bootstrap');const prior=state.items.find(v=>v.id===state.selected);state.items=data.items||[];state.settings=data.settings||state.settings;const current=state.items.find(v=>v.id===state.selected);if(prior&&prior.status!=='sent'&&current?.status==='sent'){state.filter='sent';document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter==='sent'));toast('✅ پیام منتشر شد.');}state.selected=state.selected&&state.items.some(x=>x.id===state.selected)?state.selected:state.items[0]?.id;syncSettings();render();}catch(e){toast('خطا: '+e.message);}}
+async function load(){if(demo){state.items=structuredClone(samples);state.selected=state.items[0].id;setConnection('demo');render();return;}
+ if(!telegram?.initData){setConnection('locked');el('itemList').innerHTML='<div class="noitems">🔒<br>برای ورود امن، این پنل را از منوی ربات تلگرام باز کنید.<br><small>برای پیش‌نمایش ظاهری می‌توانید پارامتر ?demo=1 را به آدرس اضافه کنید.</small></div>';el('draftView').textContent='Access requires verified Telegram Mini App session.';return;}
+ try{const data=await api('/api/bootstrap');const prior=state.items.find(v=>v.id===state.selected);state.items=data.items||[];state.settings=data.settings||state.settings;const current=state.items.find(v=>v.id===state.selected);if(prior&&prior.status!=='sent'&&current?.status==='sent'){state.filter='sent';document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter==='sent'));toast('✅ پیام منتشر شد.');}state.selected=state.selected&&state.items.some(x=>x.id===state.selected)?state.selected:state.items[0]?.id;setConnection('ready');syncSettings();render();}catch(e){setConnection('error');toast('خطا: '+e.message);}}
 
 function smartSettings(overrides={}){
  return {brandName:el('brandName').value.trim(),website:el('website').value.trim(),handle:el('handle').value.trim(),watermark:state.settings.watermark,photoMode:state.settings.photoMode,autoPublish:state.settings.autoPublish,emergencyStop:state.settings.emergencyStop===true,duplicateGuard:state.settings.duplicateGuard!==false,strictValidation:state.settings.strictValidation!==false,identityGuard:state.settings.identityGuard!==false,scanDepth:el('scanDepth').value,...overrides};
@@ -346,7 +407,7 @@ async function smartContentAction(action,data={}){
 }
 
 function syncSettings(){el('brandName').value=state.settings.brandName;el('website').value=state.settings.website;el('handle').value=state.settings.handle||'';el('cardModeToggle').classList.toggle('on',state.settings.photoMode==='card');el('cardModeToggle').setAttribute('aria-pressed',String(state.settings.photoMode==='card'));el('watermarkToggle').classList.toggle('on',state.settings.watermark);el('watermarkToggle').setAttribute('aria-pressed',String(state.settings.watermark));el('autoPublishToggle').classList.toggle('on',Boolean(state.settings.autoPublish));el('autoPublishToggle').setAttribute('aria-pressed',String(Boolean(state.settings.autoPublish)));el('scanDepth').value=state.settings.scanDepth==='deep'?'deep':'balanced';for(const [key,id] of [['emergencyStop','emergencyStopToggle'],['duplicateGuard','duplicateGuardToggle'],['strictValidation','strictValidationToggle'],['identityGuard','identityGuardToggle']]){const v=key==='emergencyStop'?state.settings[key]===true:state.settings[key]!==false;el(id).classList.toggle('on',v);el(id).setAttribute('aria-pressed',String(v));}el('licenseChip').textContent=state.settings.authorized?'White-label':'Source credit';el('licenseInfo').textContent=state.settings.authorized?'مجوز اختصاصی White-label فعال است.':'نام منبع تا زمان ثبت مجوز حفظ می‌شود.';renderCommandCenter();}
-async function mutation(action,body={}){const x=selected();if(!x||busy)return;const wasFast=state.page==='fast';setBusy(true);try{if(demo){const a=state.items.find(v=>v.id===x.id);if(action==='edit')a.draft_text=body.text;if(action==='reject')a.status='rejected';if(action==='publish')a.status='sent';if(action==='regenerate')a.draft_text=a.draft_text.replace(/\s*$/,'');if(action==='ocr'){a.ocr_text=a.ocr_text||'XAUUSD SELL 3908 SL 3915 TP1 3903';toast('متن نمونه OCR بارگذاری شد.');}if(action==='publish')toast('فقط پیش‌نمایش: ارسال واقعی انجام نشد.');else toast('تغییر نمونه اعمال شد.');}
+async function mutation(action,body={}){const x=selected();if(!x||busy)return;const returnPage=state.page;setBusy(true);try{if(demo){const a=state.items.find(v=>v.id===x.id);if(action==='edit')a.draft_text=body.text;if(action==='reject')a.status='rejected';if(action==='publish')a.status='sent';if(action==='regenerate')a.draft_text=a.draft_text.replace(/\s*$/,'');if(action==='ocr'){a.ocr_text=a.ocr_text||'XAUUSD SELL 3908 SL 3915 TP1 3903';toast('متن نمونه OCR بارگذاری شد.');}if(action==='publish')toast('فقط پیش‌نمایش: ارسال واقعی انجام نشد.');else toast('تغییر نمونه اعمال شد.');}
 
  else{
   let data;
@@ -364,7 +425,7 @@ async function mutation(action,body={}){const x=selected();if(!x||busy)return;co
   if(action==='publish'){state.filter='sent';document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter==='sent'));}toast(action==='publish'?'✅ انتشار موفق؛ پیام در بخش منتشرشده ثبت شد.':'ذخیره شد.');
  }
 
- setEdit(false);render();if(action==='publish'&&!demo){await load();page(wasFast?'fast':'inbox');}}catch(e){toast('خطا: '+e.message);if(action==='publish'&&!demo){try{await load();page(wasFast?'fast':'inbox');}catch{}}}finally{setBusy(false);renderEditor();}}
+ setEdit(false);render();if(action==='publish'&&!demo){await load();page(returnPage==='home'?'home':returnPage==='pro'?'pro':'fast');}}catch(e){toast('خطا: '+e.message);if(action==='publish'&&!demo){try{await load();page(returnPage==='home'?'home':returnPage==='pro'?'pro':'fast');}catch{}}}finally{setBusy(false);renderEditor();}}
 async function askDelete(s){if(telegram?.showConfirm)return new Promise(r=>{try{telegram.showConfirm(s,r);}catch{r(confirm(s));}});return confirm(s);}
 async function delSelected(){const x=selected();if(!x||busy||x.status==='sending')return;if(!await askDelete('پیام #'+x.id+' از صندوق حذف شود؟ این کار پیام منتشرشده در کانال را پاک نمی‌کند.'))return;setBusy(true);try{if(!demo)await api('/api/items/'+x.id,{method:'DELETE'});state.items=state.items.filter(t=>t.id!==x.id);state.selected=state.items[0]?.id??null;setEdit(false);toast('پیام حذف شد.');}catch(e){toast('خطا: '+e.message);}finally{setBusy(false);render();}}
 async function delAll(){if(!state.items.length||busy)return;if(!await askDelete('تمام پیام‌های صندوق حذف شوند؟ این کار قابل بازگشت نیست و پیام‌های کانال پاک نمی‌شوند.'))return;setBusy(true);try{if(!demo)await api('/api/items',{method:'DELETE'});state.items=[];state.selected=null;setEdit(false);toast('تمام پیام‌ها حذف شدند.');}catch(e){toast('خطا: '+e.message);}finally{setBusy(false);render();}}
@@ -394,4 +455,18 @@ el('dashGoInbox').addEventListener('click',()=>openCommandInbox(false));
 el('dashGoSettings').addEventListener('click',()=>page('settings'));
 el('dashPause').addEventListener('click',()=>updateSmartSetting('emergencyStop'));
 el('dashOpenLatest').addEventListener('click',()=>{const x=state.items[0];if(!x)return;state.selected=x.id;openCommandInbox(false);if(window.innerWidth<700)el('previewBox').scrollIntoView({behavior:'smooth',block:'start'});});
-fastMode.init();page('fast');syncSettings();load();
+function showHomeItem(inEdit=false){
+ const x=homeItem();if(!x)return;
+ state.selected=x.id;page('pro');setEdit(inEdit);render();
+ if(window.innerWidth<740){requestAnimationFrame(()=>el('previewBox').scrollIntoView({behavior:'smooth',block:'start'}));}
+}
+el('homeOpenInbox').addEventListener('click',()=>page('inbox'));
+el('homeEdit').addEventListener('click',()=>showHomeItem(true));
+el('homePreview').addEventListener('click',()=>showHomeItem(false));
+el('homePublish').addEventListener('click',async()=>{
+ if(busy)return;
+ const x=homeItem();if(!x)return;
+ if(!homeCanPublish(x)){showHomeItem(false);return;}
+ state.selected=x.id;setEdit(false);await mutation('publish');
+});
+fastMode.init();page('home');setConnection('loading');syncSettings();renderHome();load();
