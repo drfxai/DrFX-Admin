@@ -87,6 +87,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <link rel="stylesheet" href="./luxury.css?v=0.4.0"/>
 <link rel="stylesheet" href="./polish.css?v=0.4.1"/>
 <link rel="stylesheet" href="./media-fix.css?v=0.4.3"/>
+<link rel="stylesheet" href="./autonomy.css?v=0.8.0"/>
 </head>
 <body>
 <div class="shell">
@@ -120,7 +121,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
   <div class="assistant-home-status-main"><span class="assistant-live-dot"></span><strong id="homeQueueStatus">در حال آماده‌سازی</strong><span id="homeQueueCaption">پیام‌ها</span></div>
   <button type="button" id="homeOpenInbox" class="assistant-link">مشاهده صندوق <span aria-hidden="true">←</span></button>
  </div>
- <div class="assistant-quickbar" role="group" aria-label="حالت انتشار سریع"><div><strong>⚡ AUTO PUBLISH</strong><small id="homeAutoPublishLabel">فقط پیام‌های معتبر به‌صورت خودکار منتشر می‌شوند</small></div><button type="button" id="homeAutoPublish" class="assistant-auto-toggle" aria-pressed="false">AUTO OFF</button></div>
+ <div class="assistant-quickbar" role="group" aria-label="حالت انتشار سریع"><div><strong>⚡ AUTO PUBLISH</strong><small id="homeAutoPublishLabel">محتوای معتبر بدون دخالت شما آماده و منتشر می‌شود</small></div><button type="button" id="homeAutoPublish" class="assistant-auto-toggle" aria-pressed="false">AUTO OFF</button></div>
  <section class="assistant-featured" aria-label="پیام منتخب برای انتشار">
   <header class="assistant-featured-head"><div class="assistant-featured-id"><span id="homeItemId">—</span><span class="assistant-featured-state" id="homeItemState">در انتظار</span></div><span class="assistant-featured-time" id="homeItemAge">—</span></header>
   <div class="assistant-featured-body">
@@ -182,7 +183,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
    <div class="eyebrow">انتشار و ایمنی</div><h3 class="sectiontitle">انتشار و ایمنی</h3>
    <p class="smallhelp">تنها کنترل‌هایی که روزانه به آن‌ها نیاز دارید.</p>
    <div class="switchrow"><div><strong>واترمارک برند</strong><div class="smallhelp">نمایش نام و وب‌سایت شما در خروجی تصویر.</div></div><button class="switch on" id="watermarkToggle" type="button" aria-label="واترمارک عکس" aria-pressed="true"></button></div>
-   <div class="switchrow"><div><strong>انتشار خودکار سیگنال معتبر</strong><div class="smallhelp">فقط پیام‌های متنی واجد شرایط؛ موارد مبهم نیازمند بازبینی.</div></div><button class="switch on" id="autoPublishToggle" type="button" aria-label="انتشار خودکار" aria-pressed="true"></button></div>
+   <div class="switchrow"><div><strong>انتشار هوشمند و خودکار</strong><div class="smallhelp">متن، سیگنال و تصویر قابل‌تأیید منتشر می‌شوند؛ موارد نامطمئن در صندوق باقی می‌مانند.</div></div><button class="switch on" id="autoPublishToggle" type="button" aria-label="انتشار خودکار" aria-pressed="true"></button></div>
    <div class="switchrow"><div><strong>توقف اضطراری انتشار</strong><div class="smallhelp">جلوی ارسال پیام جدید در ربات را می‌گیرد.</div></div><button class="switch" id="emergencyStopToggle" type="button" aria-label="توقف اضطراری" aria-pressed="false"></button></div>
    <details class="assistant-settings-extra" id="advancedSettings">
  <summary>تنظیمات پیشرفته <span class="assistant-small-summary">قوانین و AI</span></summary>
@@ -248,5 +249,5 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <nav class="bottomnav" aria-label="ناوبری اصلی"><button class="active" data-page="home"><span>⌂</span>خانه</button><button data-page="inbox"><span>▣</span>صندوق <b id="mobilePending" class="assistant-nav-count" hidden>0</b></button><button data-page="settings"><span>⚙</span>تنظیمات</button></nav>
 <div class="toast" id="toast"></div>
 <div class="modalwrap" id="confirmModal" aria-hidden="true"><div class="modal"><div class="eyebrow">FINAL APPROVAL</div><h3>تأیید انتشار سیگنال</h3><p id="confirmText">آیا محتوای سیگنال بررسی شده و برای انتشار آماده است؟</p><div class="actionbar"><button class="btn" id="cancelPublish">انصراف</button><button class="btn primary" id="confirmPublish">↗ انتشار در کانال</button></div></div></div>
-<script type="module" src="./app.js?v=0.4.3"></script>
+<script type="module" src="./app.js?v=0.8.0"></script>
 </body></html>

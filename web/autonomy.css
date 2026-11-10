@@ -1,0 +1,23 @@
+/* DrFX Admin v0.8 - premium three-action Home and Fast interface */
+.assistant-quickbar{border:1px solid rgba(98,193,145,.25)!important;background:linear-gradient(120deg,rgba(18,45,40,.55),rgba(15,23,35,.8))!important}
+.assistant-quickbar strong{font-size:12px;letter-spacing:.8px}
+.assistant-quickbar small{color:#acbec3}
+.assistant-auto-toggle[aria-pressed="true"]{background:linear-gradient(125deg,#65d5ac,#2b926f);color:#061c14;border-color:#6cdbac}
+.assistant-actions{display:grid;grid-template-columns:1.45fr 1fr .82fr;gap:9px;margin-top:15px;direction:rtl}
+.assistant-actions .assistant-button{min-height:49px;border-radius:13px;font-weight:800;white-space:nowrap}
+.assistant-actions .assistant-primary{color:#141b22;background:linear-gradient(125deg,#f2d6a0,#d5ad70)}
+.assistant-actions .assistant-destructive{color:#f4b8b8;border-color:#64444b;background:#291d26}
+.assistant-actions .assistant-destructive:hover:not(:disabled){background:#44242b;border-color:#c26970}
+.fx-card .fx-actions{display:grid;grid-template-columns:1.3fr .95fr .75fr;gap:7px}
+.fx-card .fx-actions .fx-btn{padding:8px 5px;font-size:11px;min-height:42px}
+.fx-card .fx-actions .fx-btn.delete{color:#e3a1a6;border:1px solid #795059;background:#2b2029}
+.fx-card .fx-actions .fx-btn.delete:hover:not(:disabled){background:#512832}
+@media(max-width:740px){
+ .assistant-actions{gap:6px;grid-template-columns:1.4fr 1fr .8fr}
+ .assistant-actions .assistant-button{min-height:45px;padding:8px 3px;font-size:11px}
+ .assistant-actions .assistant-primary{font-size:12px}
+ .fx-card .fx-actions{grid-template-columns:1.2fr 1fr .7fr}
+ .fx-card .fx-actions .fx-btn{font-size:10px;padding:7px 2px}
+ .assistant-quickbar{padding:10px 12px}
+}
+@media(max-width:355px){.assistant-actions .assistant-button{font-size:10px}.fx-card .fx-actions .fx-btn{font-size:9px}}
