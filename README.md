@@ -78,3 +78,19 @@ No new D1 tables are required. Advanced preferences are stored in the existing s
 Fast never bypasses the Worker checks. Only one human click starts publication; database status locking, duplicate protection, direction/price validation, identity checks and delivery-recovery safeguards still apply. Photos must be explicitly reviewed and approved in the Pro image editor before publishing.
 
 Run \`npm test\` before every Cloudflare deployment. The generated \`dist/worker.mjs\` is committed so its contents can be reviewed and reproduced; the build check compares it byte-for-byte with source inputs.
+
+## v0.4.0 — Focused Channel Assistant
+
+The administrator interface is intentionally limited to **three destinations**:
+
+| Page | Purpose |
+| --- | --- |
+| **Home** | The latest actionable post, original detected trade levels, status, and **Edit / Preview / Publish** |
+| **Inbox** | **Fast** (review-and-publish cards) or **Pro** (full text and image editing) |
+| **Settings** | Brand identity and essential controls; image detection and security preferences in a collapsed advanced panel |
+
+The interface uses a charcoal / muted gold palette. Green is reserved for successful or valid states; red is reserved for failed or dangerous states. The mobile navigation supports safe-area insets and reduced motion.
+
+**No change to core publication permissions:** one-click publishing still uses the authenticated API, protects against duplicate posts, and validates active trade signals. Image publishing still requires a separately approved edited image. The **demo URL cannot publish messages**.
+
+Run `npm test` to validate the combined Worker and the user-interface contracts; build with `npm run build`. No new D1 tables, secrets or Telegram bot configuration are required.
