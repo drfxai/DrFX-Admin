@@ -115,14 +115,31 @@ async function tg(env,method,body){
  if(!res.ok||!out.ok)throw Error(`Telegram ${method} failed: ${String(out.description||res.status).slice(0,180)}`);
  return out.result;
 }
+/** Accept JPEG, PNG and WebP from Telegram photos or image documents. */
+function imageMime(bytes){
+ const b=bytes instanceof Uint8Array?bytes:new Uint8Array(bytes);
+ if(b.length>3&&b[0]===0xff&&b[1]===0xd8&&b[2]===0xff)return 'image/jpeg';
+ if(b.length>8&&b[0]===0x89&&b[1]===0x50&&b[2]===0x4e&&b[3]===0x47&&b[4]===0x0d&&b[5]===0x0a&&b[6]===0x1a&&b[7]===0x0a)return 'image/png';
+ if(b.length>12&&String.fromCharCode(...b.slice(0,4))==='RIFF'&&String.fromCharCode(...b.slice(8,12))==='WEBP')return 'image/webp';
+ return null;
+}
+function telegramImageId(message){
+ const photo=message?.photo?.at(-1)?.file_id;
+ if(photo)return photo;
+ const doc=message?.document;
+ return doc&&/^image\/(?:jpeg|png|webp)$/i.test(doc.mime_type||'')&&Number(doc.file_size||0)<=8*1024*1024?doc.file_id||null:null;
+}
 async function downloadPhoto(env,fileId){
  const info=await tg(env,'getFile',{file_id:fileId});
- if(info.file_size>8*1024*1024)throw Error('Image larger than 8MB');
- if(!/^photos\//.test(info.file_path||''))throw Error('Unexpected Telegram file path');
- const u=`https://api.telegram.org/file/bot${env.BOT_TOKEN}/${info.file_path}`;
+ if(Number(info.file_size||0)>8*1024*1024)throw Error('Image larger than 8MB');
+ const path=String(info.file_path||'');
+ if(!/^(?:photos|documents)\/[A-Za-z0-9._/-]{1,180}$/.test(path)||path.includes('..'))throw Error('Unexpected Telegram image path');
+ const u='https://api.telegram.org/file/bot'+env.BOT_TOKEN+'/'+path;
  const res=await fetch(u);
  if(!res.ok)throw Error('Could not retrieve Telegram image');
- const data=await res.arrayBuffer();if(data.byteLength>8*1024*1024)throw Error('Image too large');
+ const data=await res.arrayBuffer();
+ if(!data.byteLength||data.byteLength>8*1024*1024)throw Error('Invalid Telegram image size');
+ if(!imageMime(data))throw Error('Telegram file is not a supported JPEG, PNG or WebP image');
  return data;
 }
 
@@ -173,7 +190,7 @@ async function scanImage(env,item){
   const bytes=new Uint8Array(await downloadPhoto(env,item.file_id));
   if(bytes.byteLength>3000000)throw Error('Image too large for scanning');
   let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
-  const image='data:image/jpeg;base64,'+btoa(binary);
+  const image='data:'+imageMime(bytes)+';base64,'+btoa(binary);
   const scanSettings=await settings(env);
   const targets=[
    ['account','printed Telegram usernames, social media @handles and channel account labels'],
@@ -416,7 +433,7 @@ async function handleWebhook(req,env,ctx){
   return j({ok:true,emergencyStop:latest.emergencyStop});
  }
  if(m.has_protected_content){try{await tg(env,'sendMessage',{chat_id:m.chat.id,text:'این پیام دارای محدودیت محافظت محتواست و پردازش نمی‌شود.'});}catch{}return j({ok:true,protected:true});}
- const photo=m.photo?.at(-1)?.file_id||null;
+ const photo=telegramImageId(m);
  const original=String(m.caption||m.text||'').slice(0,4096);
  if(!original&&!photo)return j({ok:true,ignored:true});
  const s=await settings(env);
@@ -506,7 +523,10 @@ async function handleApi(req,env,path){
 
  if(action==='source-image'&&method==='GET'){
   if(!row.file_id)return j({error:'Image missing'},404);
-  try{const bytes=await downloadPhoto(env,row.file_id);return new Response(bytes,{headers:{'content-type':'image/jpeg','cache-control':'private,no-store','x-content-type-options':'nosniff'}});}catch(e){return j({error:'Source image unavailable'},502);}
+  try{
+   const bytes=await downloadPhoto(env,row.file_id);
+   return new Response(bytes,{headers:{'content-type':imageMime(bytes),'cache-control':'private,no-store','x-content-type-options':'nosniff','content-disposition':'inline','vary':'X-Telegram-Init-Data'}});
+  }catch(e){console.warn('Image source failed for item '+row.id+': '+String(e?.message||e).slice(0,130));return j({error:'Source image unavailable'},502);}
  }
  if(action==='image-file'&&method==='PUT')return j({error:'Image storage disabled; use direct publishing'},410);
 
@@ -523,7 +543,7 @@ async function handleApi(req,env,path){
   }catch(e){const latest=await getItem(env,String(row.id));return j({error:'Photo publication requires review: '+String(e?.message||e).slice(0,140),item:view(latest),recovery:recoveryState(latest)},409);}
  }
 
- if(action==='photo'&&method==='GET'){if(!row.file_id)return j({error:'No photo'},404);try{return new Response(await downloadPhoto(env,row.file_id),{headers:{'content-type':'image/jpeg','cache-control':'private,no-store'}});}catch(e){return j({error:'Image unavailable'},502);}}
+ if(action==='photo'&&method==='GET'){if(!row.file_id)return j({error:'No photo'},404);try{const bytes=await downloadPhoto(env,row.file_id);return new Response(bytes,{headers:{'content-type':imageMime(bytes),'cache-control':'private,no-store','x-content-type-options':'nosniff'}});}catch(e){return j({error:'Image unavailable'},502);}}
 
  if(action==='edit-published'&&method==='POST'){
   if(row.status!=='sent'||!row.destination_message_id)return j({error:'Only published messages can be edited'},409);
@@ -610,7 +630,7 @@ async function handleApi(req,env,path){
    const bytes=new Uint8Array(await downloadPhoto(env,row.file_id));
    // Gemini-4 style multimodal chat. AI inference is suggestive, never auto-published.
    const parts=[];for(let i=0;i<bytes.length;i+=0x4000)parts.push(String.fromCharCode(...bytes.subarray(i,i+0x4000)));
-   const imageUrl='data:image/jpeg;base64,'+btoa(parts.join(''));
+   const imageUrl='data:'+imageMime(bytes)+';base64,'+btoa(parts.join(''));
    const result=await env.AI.run('@cf/google/gemma-4-26b-a4b-it',{messages:[{role:'user',content:[{type:'text',text:'OCR task: transcribe the visible trading signal text exactly, preserving all symbols, entry numbers, stop losses and take profit prices. Do not invent values. Output plain text only.'},{type:'image_url',image_url:{url:imageUrl}}]}],max_tokens:800,chat_template_kwargs:{enable_thinking:false}});
    const ocr=String(result?.response||result?.result||'').slice(0,3500).trim();if(!ocr)throw Error('OCR returned no text');
    const text=[row.original_text,ocr].filter(Boolean).join('\n');
