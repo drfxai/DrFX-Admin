@@ -23,7 +23,7 @@ test('Home has genuine data fields and no fabricated candlestick chart',()=>{
  assert.doesNotMatch(html,/class="assistant-candles"/);
  assert.match(js,/publish\.dataset\.action=can\?'publish'/);
  assert.match(js,/x\.has_photo\?'media'/);
- assert.match(js,/x\.status==='failed'\?'recover'/);
+ assert.match(js,/x\?\.status==='failed'\?'recover'/);
 });
 test('fast queue routes photos to media review, not direct publish',()=>{
  assert.match(fast,/x\.has_photo\?'media'/);
