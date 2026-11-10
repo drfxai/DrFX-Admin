@@ -66,3 +66,15 @@ test('automatic widgets are off by default and retain legacy fallback',()=>{
  assert.match(source,/if\(!widgetSent\)/);
  assert.match(source,/reply_markup:\{inline_keyboard:kb\}/);
 });
+
+test('native callbacks accept only data queries and widgets use intrinsic height',()=>{
+ assert.match(source,/q\.type\?\.type!=='data'/);
+ assert.match(source,/!ok\|\|q\.type\?\.type!=='data'\|\|!m/);
+ const sends=source.match(/sendWidget['"],\{[\s\S]*?\}\)/g)||[];
+ assert.ok(sends.length>=2,'both manual and auto widget delivery present');
+ for(const send of sends){
+  assert.doesNotMatch(send,/height\s*:/);
+  assert.match(send,/allow_queries:true/);
+  assert.match(send,/chat_data:drfxReviewChatData/);
+ }
+});
