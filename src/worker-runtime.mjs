@@ -695,7 +695,7 @@ async function handleApi(req,env,path){
   for(const [key,value] of Object.entries(fields))await env.DB.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').bind(key,value).run();
   return j({ok:true,settings:await settings(env)});
  }
- const match=path.match(/^\/api\/items\/(\d+)(?:\/(edit|publish|reject|photo|ocr|regenerate|image|scan|source-image|image-file|publish-image|edit-published|template|assist|recovery))?$/);
+ const match=path.match(/^\/api\/items\/(\d+)(?:\/(edit|publish|quick-publish|reject|photo|ocr|regenerate|image|scan|source-image|image-file|publish-image|edit-published|template|assist|recovery))?$/);
  if(!match)return j({error:'Not found'},404);
  const row=await getItem(env,match[1]);if(!row)return j({error:'Item not found'},404);
  const action=match[2];
@@ -730,6 +730,25 @@ async function handleApi(req,env,path){
  if(action==='image-file'&&method==='PUT')return j({error:'Image storage disabled; use direct publishing'},410);
 
 
+ if(action==='quick-publish'&&method==='POST'){
+  if(row.status!=='review')return j({error:'This item is not awaiting publication'},409);
+  const configuration=await settings(env);
+  if(configuration.emergencyStop)return j({error:'Emergency STOP is enabled'},423);
+  try{
+   let edited=null;
+   if(row.file_id){
+    const image=await imageConfig(env,row.id);
+    if(image.scan_status!=='approved')return j({error:'Approve the cleaned image in the Mini App before fast publishing'},412);
+    edited=new Uint8Array(await brandPhoto(env,row.file_id,configuration,row));
+   }
+   const published=await publishRow(env,row,configuration,false,edited);
+   return j({ok:true,message_id:published.message_id,item:view(await getItem(env,String(row.id)))});
+  }catch(e){
+   const fresh=await getItem(env,String(row.id));
+   return j({error:'Fast publication requires review: '+String(e?.message||e).slice(0,145),
+     item:view(fresh),recovery:recoveryState(fresh)},409);
+  }
+ }
  if(action==='publish-image'&&method==='POST'){
   if(!row.file_id||row.status!=='review')return j({error:'Photo not available for publishing'},409);
   if(!/^image\/jpeg(?:;|$)/i.test(req.headers.get('content-type')||''))return j({error:'Image must be JPEG'},415);
