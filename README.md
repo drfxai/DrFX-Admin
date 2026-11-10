@@ -106,3 +106,11 @@ Run `npm test` to validate the combined Worker and the user-interface contracts;
 - The Worker publishing backend and D1 schema are unchanged.
 
 Validation: run `npm test` and compare the generated `dist/worker.mjs` with the tracked artifact before deploying.
+
+## v0.4.3 — Real Telegram image preview and OCR
+
+The Home card now displays the actual original photo through the authenticated /api/items/:id/source-image endpoint. The frontend uses a short-lived object URL with cleanup and a retry action. No bot token or Telegram file path is disclosed to clients.
+
+The Telegram bot accepts photos and JPEG/PNG/WebP image documents up to 8 MB, verifies file magic bytes, and responds with the detected MIME type. Images are still retrieved from Telegram; no new object storage or D1 schema is required.
+
+Balanced and Deep scans both attempt OCR. OCR results and candidate signal levels are saved for admin review. OCR is not guaranteed to read every small or distorted character, and photo publication still requires explicit approval. Deep scan adds extra identifier-region searches. Workers AI quota and billing may apply.

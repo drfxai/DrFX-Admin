@@ -1,9 +1,9 @@
 {
   "name": "drfx-admin",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "private": true,
   "type": "module",
-  "description": "DrFX Admin channel assistant — streamlined Fast/Pro publishing workflow",
+  "description": "DrFX Admin — Telegram image preview, image documents and OCR",
   "scripts": {
     "build": "node scripts/build.mjs",
     "check:bundle": "node scripts/build.mjs --check",
