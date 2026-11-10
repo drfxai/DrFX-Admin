@@ -427,8 +427,41 @@ export function drfxReviewChatData(item,publishEnabled=false,quickReady=!item?.f
   if(encoder.encode(JSON.stringify(state)).byteLength<=1024)low=mid;else high=mid-1;}
  state.text=chars.slice(0,low).join('');return JSON.stringify(state);
 }
+export function drfxPhotoReviewWidgetHtml(){
+ return \`<!doctype html><html><style>
+*{box-sizing:border-box}body{margin:0;background:#071524;color:#eef7ff;font:12px system-ui,sans-serif}
+.card{padding:12px;border:1px solid #237e85;border-radius:17px;background:radial-gradient(ellipse at 95% 0%,#12536a,#091927 62%);overflow:hidden}
+.row{display:flex;justify-content:space-between;align-items:center;gap:9px}
+.brand{font-size:19px;font-weight:900}.brand i{font-style:normal;color:#62f0d5}.tag{font-size:9px;color:#73edcc;letter-spacing:1px}.pill{font-size:9px;padding:4px 8px;background:#093d40;border:1px solid #348f85;border-radius:18px;color:#80f2d7}
+.photo-preview:empty{display:none}.photo-preview{margin:9px 0 6px;border-radius:11px;background:#10293c;border:1px solid #2a7286;overflow:hidden}.photo-preview img{display:block;width:100%;max-height:185px;height:auto;object-fit:contain}.photo-preview small{display:block;padding:5px 8px;font-size:9px;color:#9ac8d1}
+.box{border:1px solid #265a6a;border-radius:11px;padding:10px;background:#0c2838}.symbol{font-size:17px;font-weight:900}.hint{color:#9db9c8;font-size:10px}.levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-top:8px}.levels div{background:#103043;border-radius:7px;padding:6px}.levels small{display:block;color:#85adbe;font-size:9px}.levels b{display:block;font-size:12px;overflow-wrap:anywhere}
+button{font:800 11px system-ui,sans-serif;border-radius:9px;padding:11px 5px;border:1px solid #386d81;color:#eaf8ff;background:#153449;min-width:0;flex:1}button.main{background:linear-gradient(120deg,#0b947a,#106999);border-color:#4de8c6}.buttons{display:flex;gap:7px;margin-top:8px}button:disabled{opacity:.45}.note{font-size:10px;color:#9ebdcd;margin-top:8px;min-height:13px;line-height:1.4}
+</style><body><section class="card">
+<div class="row"><div><div class="brand">DrFX<i>Ai</i> | Admin</div><div class="tag">PRIVATE MEDIA REVIEW</div></div><span class="pill" id="state">REVIEW</span></div>
+<div class="photo-preview" id="photoPreview"></div>
+<div class="box"><div class="row"><strong id="symbol" class="symbol">IMAGE SIGNAL</strong><strong id="side">REVIEW</strong></div>
+<div class="levels"><div><small>ENTRY</small><b id="entry">—</b></div><div><small>SL</small><b id="sl">—</b></div><div><small>TP1</small><b id="tp1">—</b></div></div><p class="hint" id="content">Photo and text · Open the Mini App for full resolution and OCR review.</p></div>
+<div class="buttons"><button id="reject">✕ Reject</button><button id="refresh">↻ Status</button></div>
+<div class="buttons"><button id="edit">✎ Edit Photo</button><button class="main" id="approve">↗ Review in Admin</button></div>
+<div class="buttons" id="publishArea" hidden><button class="main" id="publish">✓ Confirm & Publish</button><button id="cancel">Cancel</button></div>
+<div class="note" id="notice">Only administrator-approved images can be published.</div>
+</section><script>(function(){
+var T=window.TelegramWidget,d=document,s={},armed=false;
+try{s=JSON.parse(T&&T.chatData||'{}')}catch(x){}
+function e(k){return d.getElementById(k)}
+function put(k,v){e(k).textContent=v===undefined||v===null||v===''?'—':String(v)}
+function draw(){put('state',String(s.status||'review').toUpperCase());put('symbol',s.signal&&s.signal.symbol||'IMAGE SIGNAL');put('side',s.signal&&s.signal.side||'IMAGE');put('entry',s.signal&&(s.signal.zone||s.signal.entry));put('sl',s.signal&&s.signal.sl);put('tp1',s.signal&&s.signal.tps&&s.signal.tps[0]);put('content',s.text||'Full image and OCR in Mini App');e('approve').disabled=!T||s.status!=='review';e('approve').textContent=s.quickReady===true&&s.publishEnabled===true?'⚡ Quick Publish':'↗ Review in Admin';e('reject').disabled=!T||s.status!=='review';e('publishArea').hidden=!armed||s.status!=='review'}
+function openAdmin(){if(T&&T.openTelegramLink)T.openTelegramLink('https://t.me/drfxa_bot?startapp=review');else put('notice','Open Mini App using the button below')}
+function act(op){if(!T||!s.id)return;put('notice','Processing…');try{T.request('drfx:'+op+':'+s.id).then(function(r){var v={};try{v=JSON.parse(r.result||'{}')}catch(x){}if(v.status)s.status=v.status;armed=false;draw();put('notice',v.message||'Updated')},function(x){put('notice','Request failed: '+(x.code||'FAILED'))})}catch(x){put('notice','Request unavailable')}}
+e('approve').onclick=function(){if(s.publishEnabled!==true||s.quickReady!==true){openAdmin();return}armed=true;draw();put('notice','Confirm to publish the approved photo')};
+e('publish').onclick=function(){act('publish')};e('cancel').onclick=function(){armed=false;draw()};
+e('edit').onclick=openAdmin;e('reject').onclick=function(){act('reject')};e('refresh').onclick=function(){act('status')};
+if(T)T.onEvent('chatDataChanged',function(){try{s=JSON.parse(T.chatData||'{}');armed=false;draw()}catch(x){}});
+draw();if(T&&T.ready)T.ready();
+})();</script></body></html>\`;
+}
 async function drfxBuildReviewWidgetHtml(env,item){
- const base=drfxReviewWidgetHtml();
+ const base=item?.file_id?drfxPhotoReviewWidgetHtml():drfxReviewWidgetHtml();
  if(!item?.file_id||!env.IMAGES)return {html:base,embedded:false};
  try{
   const input=new Uint8Array(await downloadPhoto(env,item.file_id));
