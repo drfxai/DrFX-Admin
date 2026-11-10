@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import {drfxReviewWidgetHtml,drfxReviewChatData} from '../src/worker-runtime.mjs';
+import {drfxReviewWidgetHtml,drfxPhotoReviewWidgetHtml,drfxReviewChatData} from '../src/worker-runtime.mjs';
 
-function boot(data,responses={}){
+function boot(data,responses={},widgetHtml=drfxReviewWidgetHtml()){
  const elements=new Map(),events=new Map(),actions=[],links=[];
  const get=id=>{if(!elements.has(id))elements.set(id,{textContent:'',className:'',hidden:false,disabled:false});return elements.get(id)};
  const TelegramWidget={
@@ -13,7 +13,7 @@ function boot(data,responses={}){
   openTelegramLink(url){links.push(url)},
   request(action){actions.push(action);return Promise.resolve({result:JSON.stringify(responses[action]||{message:'Received'})})}
  };
- const html=drfxReviewWidgetHtml();
+ const html=widgetHtml;
  const scripts=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)];
  assert.equal(scripts.length,1,'one self-contained script');
  vm.runInNewContext(scripts[0][1],{document:{getElementById:get},window:{TelegramWidget}},{timeout:1000});
@@ -91,4 +91,17 @@ test('approved photos show quick publishing confirmation, unapproved photos open
  assert.equal(pending.get('approve').textContent,'↗ Review in Admin');
  pending.get('approve').onclick();
  assert.equal(pending.links.length,1);
+});
+
+test('photo-specific native widget supports review, approved Quick Publish, and status',async()=>{
+ const item={...row,file_id:'approved_photo'};
+ const data=drfxReviewChatData(item,true,true);
+ const w=boot(data,{'drfx:status:17':{status:'review',message:'Confirmed'}},drfxPhotoReviewWidgetHtml());
+ assert.equal(w.get('approve').textContent,'⚡ Quick Publish');
+ w.get('approve').onclick();
+ assert.equal(w.get('publishArea').hidden,false);
+ w.get('cancel').onclick();
+ assert.equal(w.get('publishArea').hidden,true);
+ w.get('refresh').onclick();await tick();
+ assert.ok(w.actions.includes('drfx:status:17'));
 });
