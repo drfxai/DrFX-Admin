@@ -16,6 +16,8 @@
     "BRAND_NAME": "DR FX AI",
     "BRAND_HANDLE": "",
     "BRAND_WEBSITE": "https://drfx.company",
-    "PUBLIC_URL": "https://REPLACE_WITH_YOUR_WORKER_URL"
+    "PUBLIC_URL": "https://REPLACE_WITH_YOUR_WORKER_URL",
+    "DRFX_WIDGET_AUTOSEND_ENABLED": "true",
+    "DRFX_WIDGET_PUBLISH_ENABLED": "false"
   }
 }
