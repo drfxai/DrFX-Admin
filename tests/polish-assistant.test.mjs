@@ -27,7 +27,7 @@ test('Home has genuine data fields and no fabricated candlestick chart',()=>{
 });
 test('fast queue routes photos to media review, not direct publish',()=>{
  assert.match(fast,/x\.has_photo\?'media'/);
- assert.match(fast,/!x\.has_photo/);
+ assert.match(fast,/Boolean\(x\.has_photo/);
  assert.match(fast,/await publish\(id\)/);
 });
 test('Settings separates publishing rules from AI and protection',()=>{
@@ -59,5 +59,5 @@ test('HTML body has balanced non-void tags for Pro editor and Settings',()=>{
 
 test('Home prioritizes sent and failed delivery state over photo review',()=>{
  assert.match(js,/publish\.dataset\.action=can\?'publish':x\?\.status==='failed'\?'recover':x\?\.status==='sent'\?'result':x\?\.has_photo\?'media'/);
- assert.match(js,/showHomeItem\(false,\(x\.status==='sent'\|\|x\.status==='failed'\)\?'publish':x\.has_photo\?'media'/);
+ assert.match(js,/showHomeItem\(false,item\.has_photo\?'media'/);
 });

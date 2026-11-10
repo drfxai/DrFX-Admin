@@ -12,7 +12,7 @@ test('Fast and Pro views have actionable DOM targets',()=>{
 test('UI workspaces are linked and use the safe publication controller',()=>{
  const fast=read('web/fast-pro.js'),client=read('web/app.js');
  assert.match(fast,/data-fx="publish"/);
- assert.match(client,/await mutation\('publish'\)/);
+ assert.match(client,/await quickPublish\(id\)/);
  assert.match(client,/fastMode\.init\(\)/);
  assert.match(client,/scanDepth:el\('scanDepth'\)\.value/);
 });

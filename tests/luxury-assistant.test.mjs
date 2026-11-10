@@ -13,7 +13,7 @@ test('home content card has safe actions and live-binding targets',()=>{
  for(const id of ids)assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
  assert.match(js,/function renderHome\(\)/);
  assert.match(js,/function homeCanPublish\(x\)/);
- assert.match(js,/await mutation\('publish'\)/);
+ assert.match(js,/await quickPublish\(item\.id\)/);
 });
 test('Fast and Pro remain distinct modes inside Inbox',()=>{
  assert.match(js,/inboxMode='fast'/);
