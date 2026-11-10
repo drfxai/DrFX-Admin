@@ -406,6 +406,9 @@ function loadHomeSource(item,{retry=false}={}){
 function renderHome(){
  const x=homeItem();
  if(!el('homeSymbol'))return;
+ const mediaBody=el('homeMediaPanel').closest('.assistant-featured-body');
+ mediaBody?.classList.toggle('is-image',Boolean(x?.has_photo));
+ mediaBody?.classList.toggle('has-trade-levels',Boolean(x?.signal));
  const pending=state.items.filter(i=>['review','failed'].includes(i.status)).length;
  el('homeQueueStatus').textContent=state.settings.emergencyStop?'انتشار متوقف است':pending?pending+' پیام نیازمند بررسی':'صندوق آماده است';
  el('homeQueueCaption').textContent=demo?'حالت نمایشی · انتشار واقعی ندارد':pending?'در انتظار تصمیم شما':'برای دریافت پیام جدید';
