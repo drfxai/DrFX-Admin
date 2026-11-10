@@ -7,7 +7,7 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "check:bundle": "node scripts/build.mjs --check",
-    "test": "node --test && node scripts/build.mjs --check"
+    "test": "node --check web/app.js && node --check web/fast-pro.js && node --check src/worker-runtime.mjs && node --check src/identity-intel.mjs && node --check dist/worker.mjs && node --test && node scripts/build.mjs --check"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

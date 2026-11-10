@@ -1,6 +1,6 @@
 # DrFX Admin
 
-Telegram signal republishing and content management Worker with an embedded Telegram Mini App. This repository is an **export of the deployed Cloudflare Worker v56** (2026-11-06), including the trading-signal parser update for ranged entries.
+Telegram signal republishing and content management Worker with an embedded Telegram Mini App. This repository is an **source of DrFX Admin v0.3.0 (originally imported from deployed Cloudflare Worker v56)** (2026-11-06), including the trading-signal parser update for ranged entries, Fast/Pro workspace, and Identity Intelligence.
 
 ## Repository layout
 
@@ -10,7 +10,7 @@ Telegram signal republishing and content management Worker with an embedded Tele
 | `web/index.html`, `web/app.js` | Telegram Mini App UI and client logic |
 | `web/assets/` | Embedded visual assets (original JPEGs) |
 | `scripts/build.mjs` | Deterministically generates `dist/worker.mjs` from the modular source |
-| `dist/worker.mjs` | Snapshot of the v56 Worker deployed on Cloudflare |
+| `dist/worker.mjs` | Generated deployable Worker bundle, subject to separate production rollout |
 | `tests/` | Parser regression and bundle-consistency tests |
 | `wrangler.example.jsonc` | Deployment configuration template, without credentials or account-specific resource IDs |
 
