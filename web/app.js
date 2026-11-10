@@ -49,7 +49,7 @@ async function loadPhoto(x){
 }
 
 const imageData=new Map(),imagePending=new Set();
-async function ensureImageData(x){if(!x?.has_photo||imageData.has(x.id)||imagePending.has(x.id)||demo)return;imagePending.add(x.id);try{const r=await api('/api/items/'+x.id+'/image');imageData.set(x.id,r.image_edit);showImageData();}catch(e){toast(e.message);}finally{imagePending.delete(x.id);}}
+async function ensureImageData(x){if(!x?.has_photo||imageData.has(x.id)||imagePending.has(x.id)||demo)return;imagePending.add(x.id);try{const r=await api('/api/items/'+x.id+'/image');imageData.set(x.id,r.image_edit);showImageData();renderHome();}catch(e){toast(e.message);}finally{imagePending.delete(x.id);}}
 
 const visualState={itemId:null,url:null,drawing:null,loading:false};
 const visualClamp=n=>Math.max(0,Math.min(1,n));
@@ -311,7 +311,8 @@ function renderIdentityAudit(){
  }else note.textContent=foreign.length?'شناسه‌های خارجی در پیام اصلی پیدا شدند؛ خروجی نهایی باید پاکسازی و قبل از انتشار کنترل شود.':'شناسه خارجی شناسایی نشده است؛ تشخیص خودکار کامل و قطعی نیست.';
 }
 function homeItem(){return state.items.find(x=>x.status==='review')||state.items.find(x=>x.status==='failed')||state.items[0]||null;}
-function homeCanPublish(x){return !!x&&x.status==='review'&&!x.has_photo&&!!x.signal&&!state.settings.emergencyStop&&!busy;}
+function homeCanPublish(x){return !!x&&x.status==='review'&&!state.settings.emergencyStop&&!busy
+ &&(x.has_photo?imageData.get(x.id)?.scan_status==='approved':!!String(x.draft_text||'').trim());}
 function setConnection(status){
  const target=el('connectionText');if(!target)return;
  target.textContent=({ready:'پنل متصل',demo:'پیش‌نمایش',locked:'ورود از تلگرام',error:'اتصال ناموفق',loading:'در حال اتصال'})[status]||status;
@@ -421,6 +422,11 @@ function renderHome(){
  el('homeArtSymbol').textContent=x?.signal?.symbol||'DR FX AI';
  el('homeArtType').textContent=x?.has_photo?'تصویر ارسالی':x?.signal?.side==='BUY'?'سیگنال خرید':x?.signal?.side==='SELL'?'سیگنال فروش':'محتوای دریافتی';
  loadHomeSource(x);
+ if(x?.has_photo&&!imageData.has(x.id)&&!imagePending.has(x.id)&&!demo)void ensureImageData(x);
+ const auto=el('homeAutoPublish');
+ if(auto){auto.disabled=busy;auto.setAttribute('aria-pressed',String(state.settings.autoPublish===true));
+ auto.textContent=state.settings.autoPublish?'AUTO ON':'AUTO OFF';
+ el('homeAutoPublishLabel').textContent=state.settings.autoPublish?'پیام متنی معتبر به‌صورت خودکار منتشر می‌شود؛ عکس نیازمند تأیید است.':'ارسال خودکار خاموش است؛ انتشار سریع دستی همچنان فعال است.';}
  const ocr=el('homeOcrStatus');ocr.hidden=!x?.has_photo;ocr.textContent=x?.has_photo?(x.ocr_text?.trim()?'✓ متن تصویر استخراج شده؛ سطوح را بررسی کنید.':'◷ تشخیص متن تصویر در انتظار یا نیازمند بازبینی است.'):' ';
  const side=el('homeSide');side.textContent=x?.signal?.side|| (x?.has_photo?'IMAGE':'REVIEW');side.dataset.side=x?.signal?.side||'OTHER';
  el('homeEntry').textContent=x?.signal?.entryZone||x?.signal?.entry||'—';
@@ -439,9 +445,9 @@ function renderHome(){
  const can=homeCanPublish(x),publish=el('homePublish');
  publish.disabled=!x||busy||x.status==='sending'||(can&&state.settings.emergencyStop);
  publish.dataset.action=can?'publish':x?.status==='failed'?'recover':x?.status==='sent'?'result':x?.has_photo?'media':'review';
- publish.textContent=!x?'↗ انتشار':can?'↗ انتشار':x?.status==='failed'?'↻ بررسی ارسال':x?.status==='sent'?'◉ مشاهده نتیجه':x?.has_photo?'◉ بازبینی تصویر':'◉ بررسی محتوا';
+ publish.textContent=!x?'⚡ انتشار سریع':can?'⚡ انتشار سریع':x?.status==='failed'?'↻ بررسی ارسال':x?.status==='sent'?'◉ مشاهده نتیجه':x?.has_photo?'◉ تأیید تصویر':'◉ بررسی محتوا';
  el('homeEdit').disabled=!x||busy;
- el('homePreview').disabled=!x||busy;
+ el('homeDelete').disabled=!x||busy||x.status==='sending';
  el('homeGuardTitle').textContent=state.settings.emergencyStop?'انتشار اضطراری متوقف است': 'کنترل محتوا فعال است';
  el('homeGuardDetails').textContent= x?.has_photo?'OCR و پاکسازی تصویری تنها پس از تأیید شما قابل انتشارند.':'کنترل شناسه‌های خارجی و جلوگیری از انتشار تکراری فعال است.';
 }
@@ -606,7 +612,20 @@ function showHomeItem(inEdit=false,panel='content'){
 el('homeMediaRetry').addEventListener('click',()=>{const x=homeItem();if(x?.has_photo)loadHomeSource(x,{retry:true});});
 el('homeOpenInbox').addEventListener('click',()=>page('inbox'));
 el('homeEdit').addEventListener('click',()=>showHomeItem(true,'content'));
-el('homePreview').addEventListener('click',()=>showHomeItem(false,'content'));
+el('homeDelete').addEventListener('click',async()=>{
+ if(busy)return;
+ const x=homeItem();if(!x||x.status==='sending')return;
+ if(!await askDelete('پیام #'+x.id+' از صندوق ربات حذف شود؟ پیام منتشرشده در کانال حذف نمی‌شود.'))return;
+ setBusy(true);
+ try{
+  if(!demo)await api('/api/items/'+x.id,{method:'DELETE'});
+  state.items=state.items.filter(t=>t.id!==x.id);
+  if(state.selected===x.id)state.selected=state.items[0]?.id??null;
+  toast('✅ پیام از صندوق حذف شد.');
+ }catch(e){toast('حذف ناموفق: '+String(e.message||e));}
+ finally{setBusy(false);render();}
+});
+el('homeAutoPublish').addEventListener('click',()=>{if(!busy)el('autoPublishToggle').click();});
 el('homePublish').addEventListener('click',async()=>{
  if(busy)return;
  const x=homeItem();if(!x)return;
@@ -614,9 +633,20 @@ el('homePublish').addEventListener('click',async()=>{
   showHomeItem(false,(x.status==='sent'||x.status==='failed')?'publish':x.has_photo?'media':'content');
   return;
  }
- state.selected=x.id;
- setEdit(false);
- await mutation('publish');
+ // Fast lane uses the same guarded publishing transaction and server-side
+ // image cleanup as Pro; never send a raw unapproved photo.
+ setBusy(true);
+ try{
+  if(demo){const item=state.items.find(t=>t.id===x.id);item.status='sent';toast('فقط پیش‌نمایش: انتشار واقعی انجام نشد.');}
+  else{
+   const result=await api('/api/items/'+x.id+'/quick-publish',{method:'POST',body:{}});
+   if(!result.ok)throw Error(result.error||'Fast publish failed');
+   const i=state.items.findIndex(t=>t.id===x.id);if(i>=0)state.items[i]=result.item;
+   toast('✅ انتشار سریع انجام شد؛ شناسه پیام '+result.message_id);
+   await load();
+  }
+ }catch(e){toast('⚠️ '+String(e.message||e));if(!demo)await load().catch(()=>{});}
+ finally{setBusy(false);render();}
 });
 el('proToggleQueue').addEventListener('click',()=>{
  if(hasUnsavedDraft()){toast('ابتدا تغییرات متن را ذخیره کنید.');return;}

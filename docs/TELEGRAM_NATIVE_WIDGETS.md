@@ -39,3 +39,17 @@ Production release notes (Nov 10, 2026):
 - Once per hotfix release, cron attempts **one private non-trading diagnostic card**, clearly labeled as a test. The `widget_probe_release` marker prevents repeated sends; result is kept in `settings.widget_delivery_status`. Never perform a trade or publish to a channel in the probe.
 - Before claiming mobile-client success, open a newly sent widget on an official client supporting Bot API 10.4; old messages retain their original HTML permanently.
 - Commands to verify: `/widgetstatus`, `/review`, `/widgets`. Report errors from `/widgetstatus` without sharing any credential.
+
+## Image previews and fast publication — Nov 10, 2026
+
+Native Telegram widgets cannot fetch external image URLs or request original Telegram files. A newly sent private widget embeds a JPEG thumbnail using a `data:` URI **only if both Telegram limits (32768 HTML bytes / 4096 deflate bytes) are satisfied**. Cloudflare Images generates the thumbnail from the original. If compression or rendering fails, the bot sends a separate private photo preview; the Mini App continues to display full-size original imagery over its authenticated endpoint. Existing widget messages cannot change HTML.
+
+The widget offers **Quick Publish** after checking admin identity and showing inline confirmation. It requires `DRFX_WIDGET_PUBLISH_ENABLED=true`. Text posts use the existing exactly-once guarded publishRow workflow. Photos remain in manual review until an operator explicitly approves image cropping/redactions; after approval, Quick Publish produces a branded JPEG **server-side** via the Images binding and calls the same state-locked publishRow workflow. A source photo must never be posted uncleaned. Ambiguous, unreconciled, or duplicate content fails closed. The home-screen Auto Publish toggle controls only already eligible, recent, validated text signals; the one-tap Home quick publish option uses the guarded API and allows pre-approved photos.
+
+Photo-first widgets use a dedicated compact HTML renderer to reserve compression budget for real JPEG thumbnail bytes, preserving Quick Publish and Mini App controls.
+
+## Three primary commands & autonomous publication
+
+The widget and Mini App Home expose only **⚡ Quick Publish**, **✎ Edit**, and **⌫ Delete** as visible message actions. Delete removes the message from the bot's inbox only; it does not delete an already published channel post. No deletion is permitted while status is `sending`. Quick Publish uses the locked, duplicate-guarded publishing flow without a second prompt. Edit opens the full Mini App.
+
+With Auto Publish enabled, new valid forwarded/direct trade signals and clearly categorized non-trading market announcements are published automatically. Photo messages run asynchronous AI/OCR and identity detection; **only when a complete caption and independent OCR agree on all trade fields and no unverified labels or redaction risks remain** is a branded photo automatically published. Otherwise the draft remains in the review queue, with a widget sent to the admin. Unknown/uncertain delivery states are never retried automatically. This is autonomous preparation and publication for high-confidence material, not an assertion that every incoming image can be published safely.

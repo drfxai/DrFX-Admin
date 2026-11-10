@@ -9,7 +9,7 @@ test('three destination navigation remains minimal',()=>{
  for(const match of nav)assert.deepEqual([...match[1].matchAll(/data-page="([^"]+)"/g)].map(x=>x[1]),['home','inbox','settings']);
 });
 test('home content card has safe actions and live-binding targets',()=>{
- const ids=['home','homeSymbol','homeSide','homeEntry','homeStop','homeTargets','homeSafety','homePublish','homeEdit','homePreview','homeOpenInbox'];
+ const ids=['home','homeSymbol','homeSide','homeEntry','homeStop','homeTargets','homeSafety','homePublish','homeEdit','homeDelete','homeOpenInbox'];
  for(const id of ids)assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
  assert.match(js,/function renderHome\(\)/);
  assert.match(js,/function homeCanPublish\(x\)/);
@@ -37,4 +37,12 @@ test('CSS applies safe-area and reduced-motion',()=>{
  assert.match(css,/@media\(max-width:740px\)/);
  assert.match(css,/env\(safe-area-inset-bottom\)/);
  assert.match(css,/prefers-reduced-motion/);
+});
+
+test('Home offers fast publish and explicit automatic publishing preference',()=>{
+ for(const id of ['homeAutoPublish','homeAutoPublishLabel'])assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
+ assert.match(html,/⚡ انتشار سریع/);
+ assert.match(js,/el\('homeAutoPublish'\)\.addEventListener/);
+ assert.match(js,/quick-publish/);
+ assert.match(js,/imageData\.get\(x\.id\)\?\.scan_status==='approved'/);
 });
