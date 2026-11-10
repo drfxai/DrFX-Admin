@@ -1,6 +1,6 @@
 DrFX Admin - Telegram 10.4 Native Widgets
 
-Purpose: a private admin sends /review or /widgets and receives the latest pending item in a native Telegram HTML widget. The message displays a short preview, status, Reject, Approve & Publish, and Refresh. No new D1 schema is needed.
+Purpose: a private admin sends /review or /widgets and receives the latest pending item in a native Telegram HTML widget. To automatically respond with a native widget after a new eligible text/photo submission, configure DRFX_WIDGET_AUTOSEND_ENABLED=true in an isolated staging Worker first. This is disabled by default and falls back to the existing ordinary Telegram reply if sendWidget fails. Do not auto-send after uncertain publishing attempts. The message displays a short preview, status, Reject, Approve & Publish, and Refresh. No new D1 schema is needed.
 
 Security:
 - Private chats only; the webhook secret is verified before callbacks.
