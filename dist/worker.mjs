@@ -487,8 +487,9 @@ function draw(){
 e('ref').textContent='#'+(s.id||'?')+' · '+(s.kind==='image'?'Photo (Mini App required)':'Text signal');
 e('content').textContent=s.text||'No preview';
 e('state').textContent=s.status||'review';
-var can=s.status==='review'&&s.kind!=='image'&&!!T;
+var can=s.status==='review'&&s.kind!=='image'&&s.publishEnabled===true&&!!T;
 e('approve').disabled=!can;e('reject').disabled=s.status!=='review'||!T;
+e('notice').textContent=!s.publishEnabled?'Publication from widgets is disabled until approved.':'Review carefully before publishing.';
 }
 function act(name){
 if(!T||!s.id)return;
@@ -507,8 +508,20 @@ draw();
 })();
 </script></body></html>`;
 }
-export function drfxReviewChatData(item){
- return JSON.stringify({id:Number(item.id),kind:item.file_id?'image':'text',status:String(item.status||'review'),text:String(item.draft_text||item.original_text||'').slice(0,300)});
+export function drfxReviewChatData(item,publishEnabled=false){
+ // Telegram limits chat_data to 1024 UTF-8 bytes, not 1024 characters.
+ const state={id:Number(item.id),kind:item.file_id?'image':'text',status:String(item.status||'review').slice(0,24),publishEnabled:publishEnabled===true,text:''};
+ const chars=Array.from(String(item.draft_text||item.original_text||'')).slice(0,300);
+ const encoder=new TextEncoder();
+ let low=0,high=chars.length;
+ while(low<high){
+  const mid=Math.ceil((low+high)/2);
+  state.text=chars.slice(0,mid).join('');
+  if(encoder.encode(JSON.stringify(state)).byteLength<=1024)low=mid;
+  else high=mid-1;
+ }
+ state.text=chars.slice(0,low).join('');
+ return JSON.stringify(state);
 }
 async function drfxWidgetAnswer(env,id,data){
  try{await tg(env,'answerWidgetQuery',{widget_query_id:id,data:JSON.stringify(data)});}
@@ -516,7 +529,7 @@ async function drfxWidgetAnswer(env,id,data){
 }
 async function drfxWidgetUpdate(env,q,item){
  if(!q.message_id||!q.chat?.id||!item)return;
- try{await tg(env,'editMessageWidgetData',{chat_id:q.chat.id,message_id:q.message_id,chat_data:drfxReviewChatData(item)});}
+ try{await tg(env,'editMessageWidgetData',{chat_id:q.chat.id,message_id:q.message_id,chat_data:drfxReviewChatData(item,env.DRFX_WIDGET_PUBLISH_ENABLED==='true')});}
  catch(e){console.warn('Widget state update failed: '+String(e?.message||e).slice(0,100));}
 }
 async function drfxWidgetQuery(q,env,ctx){
@@ -610,7 +623,7 @@ async function handleWebhook(req,env,ctx){
  if(/^\/(?:review|widgets)(?:@\w+)?$/.test(command)){
   const row=await env.DB.prepare("SELECT * FROM inbox WHERE admin_id=? AND status='review' ORDER BY id DESC LIMIT 1").bind(String(m.from.id)).first();
   if(!row){await tg(env,'sendMessage',{chat_id:m.chat.id,text:'✅ No pending review items.'});return j({ok:true,empty:true});}
-  await tg(env,'sendWidget',{chat_id:m.chat.id,html:drfxReviewWidgetHtml(),chat_data:drfxReviewChatData(row),allow_queries:true,height:320,caption:'DrFX Admin · Review #'+row.id+' (private admin chat only)'});
+  await tg(env,'sendWidget',{chat_id:m.chat.id,html:drfxReviewWidgetHtml(),chat_data:drfxReviewChatData(row,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),allow_queries:true,height:320,caption:'DrFX Admin · Review #'+row.id+' (private admin chat only)'});
   return j({ok:true,widget_sent:true});
  }
 
