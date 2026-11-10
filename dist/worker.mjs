@@ -49,8 +49,6 @@ function cleanExternalIdentifiers(text,options={}){
 
 function __b64Array(v){const out=new Uint8Array(v.length*3/4+3);let n=0;for(let i=0;i<v.length;i+=16384){let chunk=v.slice(i,i+16384);if(i+16384<v.length)chunk=chunk.slice(0,Math.floor(chunk.length/4)*4);const decoded=atob(chunk);for(let j=0;j<decoded.length;j++)out[n++]=decoded.charCodeAt(j);}return out.slice(0,n);}
 function __asset(req){let path=new URL(req.url).pathname;if(path==='/')path='/index.html';const entry=__drfxStatic[path];if(!entry)return new Response('Not Found',{status:404});const payload=entry.base64?__b64Array(entry.base64):entry.text;return new Response(payload,{headers:{'content-type':entry.type,'cache-control':'public,max-age=300','x-content-type-options':'nosniff'}})}
-function __b64Array(v){const out=new Uint8Array(v.length*3/4+3);let n=0;for(let i=0;i<v.length;i+=16384){let chunk=v.slice(i,i+16384);if(i+16384<v.length)chunk=chunk.slice(0,Math.floor(chunk.length/4)*4);const decoded=atob(chunk);for(let j=0;j<decoded.length;j++)out[n++]=decoded.charCodeAt(j);}return out.slice(0,n);}
-function __asset(req){let path=new URL(req.url).pathname;if(path==='/')path='/index.html';const entry=__drfxStatic[path];if(!entry)return new Response('Not Found',{status:404});const payload=entry.base64?__b64Array(entry.base64):entry.text;return new Response(payload,{headers:{'content-type':entry.type,'cache-control':'public,max-age=300','x-content-type-options':'nosniff'}})}
 // Conservative parser: never invent trading prices or reorder actual TP levels.
 function toAscii(value){
   const fa='۰۱۲۳۴۵۶۷۸۹', ar='٠١٢٣٤٥٦٧٨٩';
