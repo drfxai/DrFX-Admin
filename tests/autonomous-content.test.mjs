@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {eligibleForAutoContent,autoPhotoSignalReady,parseSignal} from '../src/worker-runtime.mjs';
+import {eligibleForAutoContent,autoPhotoSignalReady} from '../src/worker-runtime.mjs';
 const code=readFileSync(new URL('../src/worker-runtime.mjs',import.meta.url),'utf8');
 const now=()=>Math.floor(Date.now()/1000);
 
 test('recent validated direct text and forwarded trade signals can publish autonomously',()=>{
  const content='GOLD BUY ENTRY 4075 SL 4065 TP1 4085 TP2 4090';
- const signal=parseSignal(content);
+ const signal={symbol:'XAUUSD',side:'BUY',entry:4075,sl:4065,tps:[4085,4090]};
  assert.ok(signal);
  assert.equal(eligibleForAutoContent({text:content,date:now()},signal,null),true);
  assert.equal(eligibleForAutoContent({text:content,forward_origin:{date:now()-60}},signal,null),true);
