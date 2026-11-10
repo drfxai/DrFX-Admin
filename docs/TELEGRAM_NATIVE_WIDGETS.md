@@ -39,3 +39,9 @@ Production release notes (Nov 10, 2026):
 - Once per hotfix release, cron attempts **one private non-trading diagnostic card**, clearly labeled as a test. The `widget_probe_release` marker prevents repeated sends; result is kept in `settings.widget_delivery_status`. Never perform a trade or publish to a channel in the probe.
 - Before claiming mobile-client success, open a newly sent widget on an official client supporting Bot API 10.4; old messages retain their original HTML permanently.
 - Commands to verify: `/widgetstatus`, `/review`, `/widgets`. Report errors from `/widgetstatus` without sharing any credential.
+
+## Image previews and fast publication — Nov 10, 2026
+
+Native Telegram widgets cannot fetch external image URLs or request original Telegram files. A newly sent private widget embeds a JPEG thumbnail using a `data:` URI **only if both Telegram limits (32768 HTML bytes / 4096 deflate bytes) are satisfied**. Cloudflare Images generates the thumbnail from the original. If compression or rendering fails, the bot sends a separate private photo preview; the Mini App continues to display full-size original imagery over its authenticated endpoint. Existing widget messages cannot change HTML.
+
+The widget offers **Quick Publish** after checking admin identity and showing inline confirmation. It requires `DRFX_WIDGET_PUBLISH_ENABLED=true`. Text posts use the existing exactly-once guarded publishRow workflow. Photos remain in manual review until an operator explicitly approves image cropping/redactions; after approval, Quick Publish produces a branded JPEG **server-side** via the Images binding and calls the same state-locked publishRow workflow. A source photo must never be posted uncleaned. Ambiguous, unreconciled, or duplicate content fails closed. The home-screen Auto Publish toggle controls only already eligible, recent, validated text signals; the one-tap Home quick publish option uses the guarded API and allows pre-approved photos.
