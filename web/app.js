@@ -447,7 +447,7 @@ function renderHome(){
  publish.dataset.action=can?'publish':x?.status==='failed'?'recover':x?.status==='sent'?'result':x?.has_photo?'media':'review';
  publish.textContent=!x?'⚡ انتشار سریع':can?'⚡ انتشار سریع':x?.status==='failed'?'↻ بررسی ارسال':x?.status==='sent'?'◉ مشاهده نتیجه':x?.has_photo?'◉ تأیید تصویر':'◉ بررسی محتوا';
  el('homeEdit').disabled=!x||busy;
- el('homePreview').disabled=!x||busy;
+ el('homeDelete').disabled=!x||busy||x.status==='sending';
  el('homeGuardTitle').textContent=state.settings.emergencyStop?'انتشار اضطراری متوقف است': 'کنترل محتوا فعال است';
  el('homeGuardDetails').textContent= x?.has_photo?'OCR و پاکسازی تصویری تنها پس از تأیید شما قابل انتشارند.':'کنترل شناسه‌های خارجی و جلوگیری از انتشار تکراری فعال است.';
 }
@@ -612,7 +612,19 @@ function showHomeItem(inEdit=false,panel='content'){
 el('homeMediaRetry').addEventListener('click',()=>{const x=homeItem();if(x?.has_photo)loadHomeSource(x,{retry:true});});
 el('homeOpenInbox').addEventListener('click',()=>page('inbox'));
 el('homeEdit').addEventListener('click',()=>showHomeItem(true,'content'));
-el('homePreview').addEventListener('click',()=>showHomeItem(false,'content'));
+el('homeDelete').addEventListener('click',async()=>{
+ if(busy)return;
+ const x=homeItem();if(!x||x.status==='sending')return;
+ if(!await askDelete('پیام #'+x.id+' از صندوق ربات حذف شود؟ پیام منتشرشده در کانال حذف نمی‌شود.'))return;
+ setBusy(true);
+ try{
+  if(!demo)await api('/api/items/'+x.id,{method:'DELETE'});
+  state.items=state.items.filter(t=>t.id!==x.id);
+  if(state.selected===x.id)state.selected=state.items[0]?.id??null;
+  toast('✅ پیام از صندوق حذف شد.');
+ }catch(e){toast('حذف ناموفق: '+String(e.message||e));}
+ finally{setBusy(false);render();}
+});
 el('homeAutoPublish').addEventListener('click',()=>{if(!busy)el('autoPublishToggle').click();});
 el('homePublish').addEventListener('click',async()=>{
  if(busy)return;
