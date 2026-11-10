@@ -427,6 +427,26 @@ export function drfxReviewChatData(item,publishEnabled=false){
   if(encoder.encode(JSON.stringify(state)).byteLength<=1024)low=mid;else high=mid-1;}
  state.text=chars.slice(0,low).join('');return JSON.stringify(state);
 }
+async function drfxWidgetDeliveryState(env,state){
+ // Diagnostics are message-free; never store a token, Telegram identity or signal content.
+ try{await env.DB.prepare("INSERT INTO settings(key,value) VALUES('widget_delivery_status',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(String(state).slice(0,150)).run()}catch{}
+}
+async function drfxSendReviewWidget(env,chatId,item,caption,origin){
+ const appUrl=String(env.PUBLIC_URL||origin||'https://drfx-admin.drfxai.workers.dev').replace(/\/$/,'');
+ const payload={chat_id:chatId,html:drfxReviewWidgetHtml(),
+  chat_data:drfxReviewChatData(item,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),
+  allow_queries:true,protect_content:true,caption,
+  reply_markup:{inline_keyboard:[[{text:'✎ Open Admin Mini App',web_app:{url:appUrl}}]]}};
+ try{
+  const delivered=await tg(env,'sendWidget',payload);
+  await drfxWidgetDeliveryState(env,'ok');
+  return delivered;
+ }catch(e){
+  const description=String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,120);
+  await drfxWidgetDeliveryState(env,'failed:'+description);
+  throw e;
+ }
+}
 async function drfxWidgetAnswer(env,id,data){
  try{await tg(env,'answerWidgetQuery',{widget_query_id:id,data:JSON.stringify(data)});}
  catch(e){console.warn('Widget answer failed: '+String(e?.message||e).slice(0,100));}
@@ -440,7 +460,7 @@ async function drfxWidgetQuery(q,env,ctx){
  if(!q?.id)return j({ok:true,ignored:true});
  const ok=q.chat?.type==='private'&&String(q.from?.id)===String(env.ADMIN_TELEGRAM_USER_ID)&&String(q.chat?.id)===String(q.from?.id)&&Number.isSafeInteger(Number(q.message_id))&&!q.inline_message_id;
  const m=/^drfx:(status|publish|reject):([1-9]\d{0,10})$/.exec(String(q.data||''));
- if(!ok||q.type?.type!=='data'||!m){await drfxWidgetAnswer(env,q.id,{message:'Not authorized'});return j({ok:true,denied:true});}
+ if(!ok||(q.type!=null&&q.type?.type!=='data')||!m){await drfxWidgetAnswer(env,q.id,{message:'Not authorized'});return j({ok:true,denied:true});}
  const row=await getItem(env,m[2]);
  if(!row||String(row.admin_id)!==String(q.from.id)||String(row.origin_chat_id)!==String(q.chat.id)){
   await drfxWidgetAnswer(env,q.id,{message:'Message unavailable'});return j({ok:true,denied:true});
@@ -527,10 +547,34 @@ async function handleWebhook(req,env,ctx){
  if(/^\/(?:review|widgets)(?:@\w+)?$/.test(command)){
   const row=await env.DB.prepare("SELECT * FROM inbox WHERE admin_id=? AND status='review' ORDER BY id DESC LIMIT 1").bind(String(m.from.id)).first();
   if(!row){await tg(env,'sendMessage',{chat_id:m.chat.id,text:'✅ No pending review items.'});return j({ok:true,empty:true});}
-  await tg(env,'sendWidget',{chat_id:m.chat.id,html:drfxReviewWidgetHtml(),chat_data:drfxReviewChatData(row,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),allow_queries:true,caption:'DrFX Admin · Review #'+row.id+' (private admin chat only)'});
-  return j({ok:true,widget_sent:true});
+  try{
+   await drfxSendReviewWidget(env,m.chat.id,row,'DrFX Admin · Review #'+row.id+' (private admin chat only)',new URL(req.url).origin);
+   return j({ok:true,widget_sent:true});
+  }catch(e){
+   console.warn('Manual widget unavailable; using admin Mini App fallback');
+   await tg(env,'sendMessage',{chat_id:m.chat.id,text:'⚠️ Telegram widget could not load. Open Admin Mini App to review the latest draft.',reply_markup:{inline_keyboard:[[{text:'✏️ Open Admin Mini App',web_app:{url:new URL(req.url).origin}}]]}}).catch(()=>{});
+   return j({ok:true,widget_sent:false,fallback_sent:true});
+  }
  }
 
+ if(/^\/widgetstatus(?:@\w+)?$/.test(command)){
+  const base=String(env.PUBLIC_URL||new URL(req.url).origin).replace(/\/$/,'');
+  const [info,commands,menu,last]=await Promise.all([
+   tg(env,'getWebhookInfo',{}).catch(()=>null),
+   tg(env,'getMyCommands',{}).catch(()=>null),
+   tg(env,'getChatMenuButton',{}).catch(()=>null),
+   env.DB.prepare("SELECT value FROM settings WHERE key='widget_delivery_status'").first().catch(()=>null)
+  ]);
+  const hookOk=info?.url===base+'/telegram'&&Array.isArray(info?.allowed_updates)&&info.allowed_updates.includes('widget_query');
+  const cmdOk=Array.isArray(commands)&&commands.some(c=>c.command==='review')&&commands.some(c=>c.command==='widgets');
+  const msg=['DrFX Admin · Widget Diagnostics','Webhook: '+(hookOk?'OK':'CHECK'),
+   'Widget commands: '+(cmdOk?'OK':'CHECK'),'Mini App: '+(menu?.type==='web_app'?'OK':'CHECK'),
+   'Last delivery: '+String(last?.value||'not attempted').slice(0,120),
+   'Widget publication: '+(env.DRFX_WIDGET_PUBLISH_ENABLED==='true'?'ENABLED':'DISABLED (safe)'),
+   'Use /review to open the latest draft.'].join('\n');
+  await tg(env,'sendMessage',{chat_id:m.chat.id,text:msg}).catch(()=>{});
+  return j({ok:true,diagnostic:true});
+ }
  if(/^\/(pause|resume|status)(?:@\w+)?$/.test(command)){
   const op=command.split('@')[0];
   if(op==='/pause'||op==='/resume')await env.DB.prepare("INSERT INTO settings(key,value) VALUES('emergencyStop',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(op==='/pause'?'true':'false').run();
@@ -578,11 +622,7 @@ async function handleWebhook(req,env,ctx){
    let widgetSent=false;
    if(env.DRFX_WIDGET_AUTOSEND_ENABLED==='true'&&!attempted&&current?.status==='review'){
     try{
-     await tg(env,'sendWidget',{
-      chat_id:m.chat.id,html:drfxReviewWidgetHtml(),
-      chat_data:drfxReviewChatData(current,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),
-      caption:msg+' Open Mini App for advanced editing.',allow_queries:true,protect_content:true
-     });
+     await drfxSendReviewWidget(env,m.chat.id,current,msg+' Open Mini App for advanced editing.',new URL(req.url).origin);
      widgetSent=true;
     }catch(e){console.warn('Widget unavailable; using legacy reply: '+String(e?.message||e).slice(0,100));}
    }
