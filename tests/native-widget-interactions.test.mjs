@@ -79,3 +79,16 @@ test('status query reports the authoritative state without publishing',async()=>
  assert.equal(w.get('publishArea').hidden,true);
  assert.equal(w.get('notice').textContent,'Current status: review');
 });
+
+test('approved photos show quick publishing confirmation, unapproved photos open editor',()=>{
+ const approved=boot(drfxReviewChatData({...row,file_id:'photo_id'},true,true),{'drfx:publish:17':{status:'sent',message:'Published'}});
+ assert.equal(approved.get('approve').textContent,'⚡ Quick Publish');
+ approved.get('approve').onclick();
+ assert.equal(approved.get('publishArea').hidden,false);
+ assert.ok(!approved.actions.includes('drfx:publish:17'));
+ approved.get('publish').onclick();
+ const pending=boot(drfxReviewChatData({...row,file_id:'photo_id'},true,false));
+ assert.equal(pending.get('approve').textContent,'↗ Review in Admin');
+ pending.get('approve').onclick();
+ assert.equal(pending.links.length,1);
+});
