@@ -7,7 +7,8 @@ const source=fs.readFileSync(new URL('../src/worker-runtime.mjs',import.meta.url
 const start=source.indexOf('function removePromo(');
 const end=source.indexOf('\nconst coder=',start);
 assert.ok(start>=0&&end>start,'Channel formatter should exist');
-const formatChannelPost=vm.runInNewContext(source.slice(start,end)+'\nformatChannelPost',{}, {timeout:1000});
+const identity=fs.readFileSync(new URL('../src/identity-intel.mjs',import.meta.url),'utf8').replace(/^export /gm,'');
+const formatChannelPost=vm.runInNewContext(identity+'\n'+source.slice(start,end)+'\nformatChannelPost',{}, {timeout:1000});
 const body="⚠️ STOP LOSS HIT\n\nDon't worry, guys. Losses are a normal part of trading.\n\nStay calm, manage your risk, and wait for the next opportunity. 📈";
 const expected=body+'\n\n📲 https://drfx.company\n\n@DrFXAi';
 test('formats the exact Telegram stop-loss example',()=>{assert.equal(formatChannelPost(body),expected);});
