@@ -347,7 +347,7 @@ function renderHome(){
  el('homeSafetyText').textContent=!x?'دستیار آماده دریافت پیام است.':x.status==='sent'?'این پیام قبلاً منتشر شده است.':x.status==='failed'?'وضعیت ارسال نیازمند بررسی در Pro است.':x.has_photo?'تصویر پیش از انتشار به تأیید دستی نیاز دارد.':x.signal?'فیلدهای معاملاتی تشخیص داده شده‌اند؛ پیش از انتشار بررسی کنید.':'پیام باید در بخش Pro بازبینی شود.';
  const can=homeCanPublish(x),publish=el('homePublish');
  publish.disabled=!x||busy||x.status==='sending'||(can&&state.settings.emergencyStop);
- publish.dataset.action=can?'publish':x?.has_photo?'media':x?.status==='failed'?'recover':x?.status==='sent'?'result':'review';
+ publish.dataset.action=can?'publish':x?.status==='failed'?'recover':x?.status==='sent'?'result':x?.has_photo?'media':'review';
  publish.textContent=!x?'↗ انتشار':can?'↗ انتشار':x?.status==='failed'?'↻ بررسی ارسال':x?.status==='sent'?'◉ مشاهده نتیجه':x?.has_photo?'◉ بازبینی تصویر':'◉ بررسی محتوا';
  el('homeEdit').disabled=!x||busy;
  el('homePreview').disabled=!x||busy;
@@ -519,7 +519,7 @@ el('homePublish').addEventListener('click',async()=>{
  if(busy)return;
  const x=homeItem();if(!x)return;
  if(!homeCanPublish(x)){
-  showHomeItem(false,x.has_photo?'media':x.status==='sent'||x.status==='failed'?'publish':'content');
+  showHomeItem(false,(x.status==='sent'||x.status==='failed')?'publish':x.has_photo?'media':'content');
   return;
  }
  state.selected=x.id;
