@@ -613,36 +613,95 @@ async function drfxWidgetQuery(q,env,ctx){
  return j({ok:true,publication_requested:true});
 }
 
+/**
+ * Automatic media release is deliberately fail-closed.
+ * A new branded card (rather than the source image) is built for verified trades,
+ * so source watermarks, contact IDs and hidden promotional marks are not copied.
+ * OCR-only images require an independent second transcription to agree exactly.
+ */
+function sameTrade(a,b){
+ if(!a||!b)return false;
+ return a.side===b.side&&a.symbol===b.symbol&&
+  a.entry===b.entry&&a.sl===b.sl&&a.entryLow===b.entryLow&&a.entryHigh===b.entryHigh&&
+  JSON.stringify(a.tps)===JSON.stringify(b.tps);
+}
+function autoImageCandidate(item,ocr1,ocr2){
+ const first=parseSignal(String(ocr1||'')),second=parseSignal(String(ocr2||''));
+ const caption=parseSignal(String(item?.original_text||''));
+ // Two distinct sources: message caption and OCR, or two independently run OCR calls.
+ if(!first||!sameTrade(first,caption||second))return null;
+ const text=toAscii(String(ocr1||''));
+ if(/\b(?:WAIT|PENDING|LIMIT|STOP ORDER|CANCELLED|CANCELED|CLOSED|HIT SL|SL HIT)\b|منتظر|لغو|بسته شد/i.test(text))return null;
+ return first;
+}
+async function secondImageTranscription(env,item){
+ if(!env.AI||!item?.file_id)return '';
+ const bytes=new Uint8Array(await downloadPhoto(env,item.file_id));
+ if(bytes.byteLength>3000000)return '';
+ let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
+ const url='data:'+imageMime(bytes)+';base64,'+btoa(binary);
+ // Second independent inference; equality of actual fields, not AI confidence claims.
+ return recognizeImageText(env,url);
+}
+async function prepareAutonomousPhoto(env,item,s,{rescan=false}={}){
+ if(!item?.file_id||item.status!=='review'||s.emergencyStop||s.strictValidation===false)return null;
+ let cfg=await imageConfig(env,item.id);
+ if(cfg.scan_status==='approved'){
+  // Already approved by the administrator; retain the manual editing pipeline.
+  return {ready:true,photo:new Uint8Array(await brandPhoto(env,item.file_id,s,item)),mode:'approved'};
+ }
+ if(rescan||!['needs_review','approved'].includes(cfg.scan_status))cfg=await scanImage(env,item);
+ const fresh=await getItem(env,String(item.id));
+ if(!fresh||fresh.status!=='review')return null;
+ const fromCaption=parseSignal(item.original_text);
+ const firstOcr=parseSignal(fresh.ocr_text);
+ if(!firstOcr)return null;
+ let secondOcr='';
+ if(!fromCaption){
+  try{secondOcr=await secondImageTranscription(env,item)}catch(e){console.warn('Second OCR unavailable: '+String(e?.message||e).slice(0,95))}
+ }
+ const signal=autoImageCandidate(item,fresh.ocr_text,secondOcr);
+ if(!signal)return null;
+ // Only prepare active posts; old forwarded trade screenshots are not published.
+ const now=Date.now()/1000;
+ if(Number(fresh.created_at||0)>0&&now-Number(fresh.created_at)>1800)return null;
+ // Every destination text character is generated only from validated levels.
+ const draft=formatSignal(signal,s);
+ if(detectIdentifiers(draft,{website:CHANNEL_WEBSITE,handle:CHANNEL_HANDLE}).some(x=>!x.own))return null;
+ if(draft.length>1024)return null;
+ const changed=await env.DB.prepare("UPDATE inbox SET draft_text=?,signal_json=?,updated_at=unixepoch() WHERE id=? AND status='review'")
+  .bind(draft,JSON.stringify(signal),item.id).run();
+ if(!changed.meta.changes)return null;
+ const current=await getItem(env,String(item.id));
+ if(!current||current.status!=='review')return null;
+ // Clean-room redesign; do NOT paste the original photo into the channel.
+ const photo=new Uint8Array(await createSignalCard(env,current,s));
+ if(photo.length<1000||photo.length>1500000)return null;
+ await updateImageConfig(env,item.id,{...cfg,redactions:[],trim_top:0,trim_bottom:0,trim_left:0,trim_right:0,
+  scan_status:'approved',scan_note:'Auto-created brand-new image card from cross-checked trade fields; source pixels and identifiers excluded.'});
+ return {ready:true,photo,mode:'auto-card',signal};
+}
 async function drfxAutoPhotoWorkflow(env,item,m,s,origin){
- // Detached from webhook via ctx.waitUntil. Only two independently visible
- // sources (Telegram caption and AI OCR) with exact pricing agreement qualify.
- // Any uncertain image stays in the pending queue, not in the public channel.
- let delivered=false,attempted=false;
+ let attempted=false,delivered=false;
  try{
-  const scan=await scanImage(env,item);
-  const fresh=await getItem(env,String(item.id));
-  if(!fresh||fresh.status!=='review')return;
-  if(s.autoPublish&&s.strictValidation!==false&&!s.emergencyStop
-      &&autoPhotoSignalReady(item,fresh,scan)){
-   await updateImageConfig(env,item.id,{...scan,trim_top:0,trim_bottom:0,
-     scan_status:'approved',scan_note:'Auto-verified: Telegram caption and independent image OCR match all trade levels; no external identity detected.'});
-   const current=await getItem(env,String(item.id));
-   if(current?.status!=='review')return;
-   try{
-    const cleaned=new Uint8Array(await brandPhoto(env,current.file_id,s,current));
+  const ready=await prepareAutonomousPhoto(env,item,s,{rescan:true});
+  if(ready?.ready){
+   const fresh=await getItem(env,String(item.id));
+   if(fresh?.status==='review'){
     attempted=true;
-    const result=await publishRow(env,current,s,false,cleaned);
+    const result=await publishRow(env,fresh,s,false,ready.photo);
     delivered=true;
-    await tg(env,'sendMessage',{chat_id:m.chat.id,text:'✅ تصویر پس از اعتبارسنجی خودکار و پاکسازی منتشر شد. شناسه پیام: '+result.message_id}).catch(()=>{});
-   }catch(e){attempted=true;console.warn('Auto photo publication needs review: '+String(e?.message||e).slice(0,140))}
+    await tg(env,'sendMessage',{chat_id:m.chat.id,text:'✅ تصویر به‌صورت هوشمند آماده و منتشر شد. شناسه: '+result.message_id}).catch(()=>{});
+   }
   }
- }catch(e){console.warn('Autonomous photo analysis unavailable: '+String(e?.message||e).slice(0,130))}
+ }catch(e){console.warn('Autonomous image publication failed: '+String(e?.message||e).slice(0,150))}
  if(delivered)return;
  const current=await getItem(env,String(item.id));
- if(!current||current.status!=='review')return; // A failed/uncertain send must never be retried automatically.
- const caption=attempted?'⚠️ انتشار تصویر نامطمئن بود؛ لطفاً کانال را بررسی کنید.':'🖼️ تصویر آماده‌سازی شد؛ بررسی خودکار نتوانست صحت آن را قطعی کند.';
- try{await drfxSendReviewWidget(env,m.chat.id,current,caption,origin)}
- catch(e){await tg(env,'sendMessage',{chat_id:m.chat.id,text:caption,reply_markup:{inline_keyboard:[[{text:'✏️ Open Admin Mini App',web_app:{url:origin}}]]}}).catch(()=>{})}
+ if(!current||current.status!=='review')return; // Never retry an uncertain delivery.
+ const notice=attempted?'⚠️ وضعیت ارسال نامطمئن است؛ کانال را بررسی کنید.':
+  '🖼️ تصویر پردازش شد؛ اطلاعات کافی برای انتشار مطمئن وجود ندارد. با سه گزینه زیر می‌توانید ادامه دهید.';
+ try{await drfxSendReviewWidget(env,m.chat.id,current,notice,origin)}
+ catch(e){await tg(env,'sendMessage',{chat_id:m.chat.id,text:notice,reply_markup:{inline_keyboard:drfxThreeActions(current,origin)}}).catch(()=>{})}
 }
 async function handleWebhook(req,env,ctx){
  if(!env.WEBHOOK_SECRET||!safeEqual(req.headers.get('X-Telegram-Bot-Api-Secret-Token'),env.WEBHOOK_SECRET))return j({error:'unauthorized'},403);
