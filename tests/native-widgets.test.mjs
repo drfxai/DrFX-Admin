@@ -30,8 +30,8 @@ test('widget callback requires Telegram-authenticated admin and message ownershi
  assert.match(source,/q\.chat\?\.type==='private'/);
  assert.match(source,/q\.from\?\.id/);
  assert.match(source,/ADMIN_TELEGRAM_USER_ID/);
- assert.match(source,/String\(row\.admin_id\)===String\(q\.from\.id\)/);
- assert.match(source,/String\(row\.origin_chat_id\)===String\(q\.chat\.id\)/);
+ assert.match(source,/String\(row\.admin_id\)!==String\(q\.from\.id\)/);
+ assert.match(source,/String\(row\.origin_chat_id\)!==String\(q\.chat\.id\)/);
  assert.match(source,/DRFX_WIDGET_PUBLISH_ENABLED!=='true'/);
  assert.match(source,/status='rejected'.+status='review'/);
 });
