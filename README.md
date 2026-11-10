@@ -63,3 +63,18 @@ The parser checks side/symbol, entry, SL and at least one TP, and rejects levels
 This repository includes **source code and bundled static files only**. It does not contain the live D1 database, messages, Telegram bot tokens, deployment secrets or user credentials. The repository was public when this code was imported; review every proposed change before publication. This snapshot is **not** a live database backup.
 
 The first imported version intentionally preserves the deployed Worker logic. Refactor only with parser, UI and delivery regression tests, and keep the generated `dist/worker.mjs` in sync with the source.
+
+
+## Fast / Pro workspaces
+
+- **Fast:** compact signal cards and a single-click action for **verified text signals only**. Failed delivery, ambiguous signals and photos go to the Pro review path.
+- **Pro:** full content editing, image masking, OCR, AI assistance, risk fields, publishing recovery and identity inspection.
+- **Identity Intelligence:** deterministic extraction of @handles, Telegram/social links, email addresses, phone numbers, domains and numeric account IDs in text. It preserves price levels and your configured brand identity.
+- **Image scan:** the existing Cloudflare vision service proposes possible identity/logo regions for manual review. **Deep** mode adds more target searches and OCR for identity auditing; it may cost additional inference and can miss small or distorted text. Never treat a clean scan as proof that no identifier exists.
+
+No new D1 tables are required. Advanced preferences are stored in the existing settings key/value table as \`identityGuard\` and \`scanDepth\`. Keep \`identityGuard\` enabled in production.
+
+### Safe publishing
+Fast never bypasses the Worker checks. Only one human click starts publication; database status locking, duplicate protection, direction/price validation, identity checks and delivery-recovery safeguards still apply. Photos must be explicitly reviewed and approved in the Pro image editor before publishing.
+
+Run \`npm test\` before every Cloudflare deployment. The generated \`dist/worker.mjs\` is committed so its contents can be reviewed and reproduced; the build check compares it byte-for-byte with source inputs.

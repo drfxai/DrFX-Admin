@@ -1,9 +1,9 @@
 {
   "name": "drfx-admin",
-  "version": "0.2.56",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
-  "description": "Source and reproducible snapshot of the DrFX Admin Cloudflare Worker v56",
+  "description": "DrFX Admin Fast/Pro Mini App with signal validation and identifier intelligence",
   "scripts": {
     "build": "node scripts/build.mjs",
     "check:bundle": "node scripts/build.mjs --check",
