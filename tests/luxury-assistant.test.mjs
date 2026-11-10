@@ -38,3 +38,11 @@ test('CSS applies safe-area and reduced-motion',()=>{
  assert.match(css,/env\(safe-area-inset-bottom\)/);
  assert.match(css,/prefers-reduced-motion/);
 });
+
+test('Home offers fast publish and explicit automatic publishing preference',()=>{
+ for(const id of ['homeAutoPublish','homeAutoPublishLabel'])assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
+ assert.match(html,/⚡ انتشار سریع/);
+ assert.match(js,/el\('homeAutoPublish'\)\.addEventListener/);
+ assert.match(js,/quick-publish/);
+ assert.match(js,/imageData\.get\(x\.id\)\?\.scan_status==='approved'/);
+});
