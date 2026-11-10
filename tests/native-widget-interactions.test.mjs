@@ -24,8 +24,8 @@ const row={id:17,status:'review',file_id:null,draft_text:'GOLD BUY ENTRY 4075 SL
 test('admin widget shows parsed prices, but never sends an unapproved channel publish',()=>{
  const w=boot(drfxReviewChatData(row));
  assert.equal(w.get('symbol').textContent,'XAUUSD');
- assert.equal(w.get('entry').textContent,4075);
- assert.equal(w.get('sl').textContent,4065);
+ assert.equal(w.get('entry').textContent,'4075');
+ assert.equal(w.get('sl').textContent,'4065');
  assert.equal(w.get('approve').disabled,true);
  assert.equal(w.get('publishArea').hidden,true);
  assert.deepEqual(w.actions,['ready']);
