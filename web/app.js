@@ -42,9 +42,9 @@ async function loadPhoto(x){
    const res=await fetch('/api/items/'+x.id+'/source-image',{headers:{'X-Telegram-Init-Data':telegram?.initData||''}});
    if(!res.ok)throw Error();
    const url=URL.createObjectURL(await res.blob());
-   if(img.dataset.selected===String(x.id)){img.src=url;img.onload=()=>URL.revokeObjectURL(url);}else URL.revokeObjectURL(url);
+   if(img.dataset.selected===String(x.id)){img.onload=()=>{URL.revokeObjectURL(url);img.dataset.loaded=String(x.id);};img.onerror=()=>{URL.revokeObjectURL(url);img.dataset.loaded='';};img.src=url;}else URL.revokeObjectURL(url);
    toast('این تصویر خام است؛ پاکسازی را بررسی کنید.');
-  }catch{toast('دریافت تصویر ناموفق بود');}
+  }catch{img.dataset.loaded='';toast('دریافت تصویر ناموفق بود. از صفحه تصویر مجدداً تلاش کنید.');}
  }
 }
 
@@ -256,7 +256,7 @@ async function recoverCurrentPost(){
 }
 
 function renderEditor(){renderRecoveryPanel();const x=selected();const valid=x&&(x.status==='review'||x.status==='failed');const hasPhoto=Boolean(x?.has_photo);el('smartCategory').textContent=x?.category?x.category.kind+' / '+x.category.market:'—';el('templatePicker').disabled=busy||!x||!['review','failed'].includes(x.status);el('applyTemplateBtn').disabled=busy||!x||!['review','failed'].includes(x.status);for(const b of document.querySelectorAll('[data-ai-mode]'))b.disabled=busy||!x||!['review','failed'].includes(x.status);el('editPublishedBtn').style.display=x?.status==='sent'?'inline-flex':'none';el('editPublishedBtn').disabled=busy||x?.status!=='sent'||!state.isEditing;const success=el('publicationResult');success.hidden=x?.status!=='sent';if(x?.status==='sent')success.textContent='✅ انتشار موفق در کانال DR FX AI'+(x.destination_message_id?' | شماره پیام: '+x.destination_message_id:'');el('selectionMeta').textContent=x?`#${x.id}   •   ${x.source_label||'Unknown'}`:'یک پیام را انتخاب کنید';el('editorState').textContent=x?statusFa(x.status):'در انتظار انتخاب';el('editorState').className='status '+(x?.status||'review');if(!state.isEditing)el('draftView').textContent=x?.draft_text||'برای مشاهده پیش‌نویس، یک پیام را از صندوق انتخاب کنید.';el('draftEdit').value=x?.draft_text||'';el('draftEdit').maxLength=hasPhoto?(x?.status==='sent'?1024:800):(x?.status==='sent'?4096:3900);el('previewImage').classList.toggle('visible',hasPhoto);const cardMode=state.settings.photoMode==='card' && hasPhoto && !!x?.signal;el('previewImage').classList.toggle('card-mode',cardMode);if(cardMode){el('cardBrand').textContent=state.settings.brandName+' / PREMIUM SIGNALS';el('cardTitle').textContent=x.signal.symbol+' / '+x.signal.side;el('cardTitle').classList.toggle('sell',x.signal.side==='SELL');el('cardFields').textContent='ENTRY       '+(x.signal.entryZone||x.signal.entry)+'\nSTOP LOSS  '+x.signal.sl+'\n'+(x.signal.tps||[]).map((tp,i)=>Number.isFinite(tp)?'TARGET '+(i+1)+'     '+tp:'').filter(Boolean).join('\n');el('cardSite').textContent=state.settings.website.replace(/^https?:\/\//,'');}el('watermarkLabel').style.display=state.settings.watermark?'':'none';el('watermarkLabel').textContent=`${state.settings.brandName} · ${state.settings.website.replace(/^https?:\/\//,'')}`;
- if(hasPhoto){ensureImageData(x);el('photoPreview').dataset.selected=String(x.id);if(el('photoPreview').dataset.loaded!==String(x.id)){el('photoPreview').dataset.loaded=String(x.id);loadPhoto(x);}}else{el('photoPreview').dataset.loaded='';el('photoPreview').removeAttribute('src');}
+ if(hasPhoto){ensureImageData(x);el('photoPreview').dataset.selected=String(x.id);if(el('photoPreview').dataset.loaded!==String(x.id)&&el('photoPreview').dataset.loading!==String(x.id)){el('photoPreview').dataset.loading=String(x.id);void loadPhoto(x).finally(()=>{if(el('photoPreview').dataset.loading===String(x.id))el('photoPreview').dataset.loading='';});}}else{el('photoPreview').dataset.loaded='';el('photoPreview').dataset.loading='';el('photoPreview').removeAttribute('src');}
  el('ocrBtn').disabled=busy||!valid||!hasPhoto;el('regenBtn').disabled=busy||!valid;el('saveDraft').disabled=busy||!valid;el('publishBtn').disabled=busy||x?.status!=='review';el('rejectBtn').disabled=busy||!valid;el('deleteBtn').disabled=busy||!x||x.status==='sending';
  if(hasPhoto)showImageData();
  el('editorHelp').textContent=state.settings.emergencyStop?'🛑 انتشار اضطراری متوقف شده است.':hasPhoto?(state.settings.photoMode==='card'?'حالت بازسازی: از داده‌های بررسی‌شده، کارت تازه ساخته می‌شود. تصویر جدید نیازمند تشخیص صحیح Entry / SL / TP است.':'ویرایش تصویر روی دستگاه شما انجام می‌شود؛ فایل JPEG در دیتابیس ذخیره نمی‌شود و پس از تأیید مستقیماً به تلگرام می‌رود.'):'اعداد و جزئیات را قبل از انتشار بررسی کنید.';
@@ -317,6 +317,92 @@ function setConnection(status){
  target.textContent=({ready:'پنل متصل',demo:'پیش‌نمایش',locked:'ورود از تلگرام',error:'اتصال ناموفق',loading:'در حال اتصال'})[status]||status;
  el('headerConnection').dataset.status=status;
 }
+
+/**
+ * Private, authenticated source image viewer.
+ * Images are always obtained via the logged-in Worker; bot tokens and Telegram
+ * file paths are never exposed to the client or embedded into the HTML.
+ */
+const homeMedia={id:null,url:null,controller:null,loading:false,error:null};
+function clearHomeMedia(){
+ homeMedia.controller?.abort();homeMedia.controller=null;
+ if(homeMedia.url){URL.revokeObjectURL(homeMedia.url);homeMedia.url=null;}
+ homeMedia.loading=false;homeMedia.error=null;homeMedia.id=null;
+ const img=el('homeSourceImage');if(img){img.hidden=true;img.removeAttribute('src');}
+}
+function mediaStatus(message,retry=false){
+ const status=el('homeMediaState'),button=el('homeMediaRetry');
+ if(!status||!button)return;
+ status.textContent=message||'';status.hidden=!message;
+ button.hidden=!retry;
+}
+function loadHomeSource(item,{retry=false}={}){
+ const panel=el('homeMediaPanel'),img=el('homeSourceImage'),fallback=el('homeArtFallback');
+ if(!panel||!img||!fallback)return;
+ const hasImage=Boolean(item?.has_photo);
+ panel.classList.toggle('has-source',hasImage);
+ panel.classList.toggle('image-loaded',false);
+ if(!hasImage){
+  if(homeMedia.id!==null)clearHomeMedia();
+  fallback.hidden=false;mediaStatus('');
+  return;
+ }
+ if(homeMedia.id!==item.id){
+  clearHomeMedia();homeMedia.id=item.id;img.hidden=true;fallback.hidden=false;
+ }
+ if(!retry&&(homeMedia.loading||homeMedia.url||homeMedia.error))return;
+ homeMedia.error=null;homeMedia.loading=true;
+ const controller=new AbortController();homeMedia.controller=controller;
+ mediaStatus('در حال بارگذاری عکس اصلی…',false);
+ const target=item.id;
+ if(demo){
+  homeMedia.loading=false;homeMedia.controller=null;
+  img.onload=()=>{if(homeMedia.id!==target)return;img.hidden=false;fallback.hidden=true;panel.classList.add('image-loaded');mediaStatus('');};
+  img.onerror=()=>{if(homeMedia.id!==target)return;homeMedia.error='demo image';mediaStatus('بارگذاری تصویر نمایشی ناموفق بود.',true);};
+  img.src='./assets/demo-chart.jpg';
+  return;
+ }
+ if(!telegram?.initData){
+  homeMedia.loading=false;homeMedia.error='not authenticated';
+  mediaStatus('تصویر فقط داخل مینی‌اپ تلگرام قابل مشاهده است.',false);
+  return;
+ }
+ void (async()=>{
+  let url=null;
+  try{
+   const res=await fetch('/api/items/'+encodeURIComponent(target)+'/source-image',{
+    headers:{'X-Telegram-Init-Data':telegram.initData,'Accept':'image/jpeg,image/png,image/webp'},
+    cache:'no-store',credentials:'same-origin',signal:controller.signal
+   });
+   if(!res.ok)throw Error(res.status===404?'تصویر در تلگرام موجود نیست.':res.status===401||res.status===403?'نشست تلگرام معتبر نیست.':'دریافت تصویر از تلگرام ناموفق بود ('+res.status+').');
+   if(!/^image\/(?:jpeg|png|webp)\b/i.test(res.headers.get('content-type')||''))throw Error('فرمت تصویر دریافتی پشتیبانی نمی‌شود.');
+   const blob=await res.blob();
+   if(!blob.size||blob.size>8*1024*1024)throw Error('اندازه تصویر نامعتبر است.');
+   if(homeMedia.id!==target||controller.signal.aborted)return;
+   url=URL.createObjectURL(blob);
+   const assignedUrl=url;
+   img.onload=()=>{
+    if(homeMedia.id!==target)return;
+    homeMedia.loading=false;homeMedia.url=assignedUrl;homeMedia.controller=null;
+    img.hidden=false;fallback.hidden=true;panel.classList.add('image-loaded');mediaStatus('');
+   };
+   img.onerror=()=>{
+    if(homeMedia.id!==target)return;
+    URL.revokeObjectURL(assignedUrl);homeMedia.loading=false;homeMedia.url=null;
+    homeMedia.error='image decode failed';homeMedia.controller=null;img.hidden=true;
+    fallback.hidden=false;mediaStatus('تصویر دریافت شد اما قابل نمایش نیست.',true);
+   };
+   img.src=assignedUrl;
+   url=null;
+  }catch(error){
+   if(error?.name==='AbortError'||homeMedia.id!==target)return;
+   homeMedia.error=String(error?.message||error);
+   homeMedia.loading=false;homeMedia.controller=null;img.hidden=true;
+   fallback.hidden=false;mediaStatus(homeMedia.error,true);
+  }finally{if(url)URL.revokeObjectURL(url);}
+ })();
+}
+
 function renderHome(){
  const x=homeItem();
  if(!el('homeSymbol'))return;
@@ -331,6 +417,8 @@ function renderHome(){
  el('homeSymbol').textContent=x?.signal?.symbol|| (x?.has_photo?'پیام تصویری':x?'پیام دریافتی':'منتظر دریافت پیام');
  el('homeArtSymbol').textContent=x?.signal?.symbol||'DR FX AI';
  el('homeArtType').textContent=x?.has_photo?'تصویر ارسالی':x?.signal?.side==='BUY'?'سیگنال خرید':x?.signal?.side==='SELL'?'سیگنال فروش':'محتوای دریافتی';
+ loadHomeSource(x);
+ const ocr=el('homeOcrStatus');ocr.hidden=!x?.has_photo;ocr.textContent=x?.has_photo?(x.ocr_text?.trim()?'✓ متن تصویر استخراج شده؛ سطوح را بررسی کنید.':'◷ تشخیص متن تصویر در انتظار یا نیازمند بازبینی است.'):' ';
  const side=el('homeSide');side.textContent=x?.signal?.side|| (x?.has_photo?'IMAGE':'REVIEW');side.dataset.side=x?.signal?.side||'OTHER';
  el('homeEntry').textContent=x?.signal?.entryZone||x?.signal?.entry||'—';
  el('homeStop').textContent=x?.signal?.sl||'—';
@@ -512,6 +600,7 @@ function showHomeItem(inEdit=false,panel='content'){
  render();
  if(window.innerWidth<740)requestAnimationFrame(()=>el('proWorkspaceTabs').scrollIntoView({behavior:'smooth',block:'start'}));
 }
+el('homeMediaRetry').addEventListener('click',()=>{const x=homeItem();if(x?.has_photo)loadHomeSource(x,{retry:true});});
 el('homeOpenInbox').addEventListener('click',()=>page('inbox'));
 el('homeEdit').addEventListener('click',()=>showHomeItem(true,'content'));
 el('homePreview').addEventListener('click',()=>showHomeItem(false,'content'));
@@ -543,4 +632,5 @@ for(const button of document.querySelectorAll('[data-pro-tab]')){
 el('proScanShortcut').addEventListener('click',()=>{if(!el('ocrBtn').disabled)el('ocrBtn').click();});
 el('proRegenerateShortcut').addEventListener('click',()=>{if(!el('regenBtn').disabled)el('regenBtn').click();});
 
+window.addEventListener('pagehide',clearHomeMedia);
 fastMode.init();page('home');setConnection('loading');syncSettings();renderHome();load();
