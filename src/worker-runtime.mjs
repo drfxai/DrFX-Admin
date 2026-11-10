@@ -52,7 +52,7 @@ function removePromo(text,{licensed=false,website='https://drfx.company',handle=
   const domains=/\b[a-z][a-z0-9-]{2,}\s*\.\s*(?:com|net|org|info|io|co|me|online|company|ai|app|site|dev|xyz)\b(?:\/[^\s]*)?/gi;
   const telegram=/(?:t\s*\.\s*me|telegram\s*\.\s*me)\s*\/\s*[a-z0-9_+/?=&.-]+/gi;
   const handles=/(^|[\s([{])@([a-z][a-z0-9_]{4,32})\b/gi;
-  return String(text||'')
+  return cleanExternalIdentifiers(String(text||''),{website,handle})
    .replace(/[\u200b\u200c\u200d\u2060]/g,'')
    .replace(/(\d)(?=MORE\s+(?:BUY|SELL)\b)/gi,'$1\n')
    .replace(/(\d)\s*(?=💰\s*TP\b)/gi,'$1\n')
@@ -174,22 +174,47 @@ async function scanImage(env,item){
   if(bytes.byteLength>3000000)throw Error('Image too large for scanning');
   let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
   const image='data:image/jpeg;base64,'+btoa(binary);
+  const scanSettings=await settings(env);
   const targets=[
-   ['url','website URL, web address or domain name text'],
-   ['telegram','Telegram username, social media handle or email address'],
-   ['logo','company or channel branding logo, watermark or promotional text']
+   ['account','printed Telegram usernames, social media @handles and channel account labels'],
+   ['contact','website URLs, e-mail addresses, social network links or phone numbers printed in the image'],
+   ['brand','company logos, branded promotional text and watermarks']
   ];
+  if(scanSettings.scanDepth==='deep')targets.push(
+   ['social','small social media usernames, invitation links, Telegram, X, Instagram or TikTok identifiers'],
+   ['qr','QR codes, WhatsApp contact codes and social media scannable codes']
+  );
   const masks=[],labels=[];
+  const failed=[];
   for(const [label,target] of targets){
-   const result=await env.AI.run('@cf/moondream/moondream3.1-9B-A2B',{task:'detect',image,target,max_objects:8,stream:false});
-   for(const o of (result?.objects||[])){
-    const xmin=Number(o.x_min),ymin=Number(o.y_min),xmax=Number(o.x_max),ymax=Number(o.y_max);
-    if(![xmin,ymin,xmax,ymax].every(Number.isFinite))continue;
-    const region={x:Math.max(0,xmin-.003),y:Math.max(0,ymin-.003),w:Math.min(1,xmax+.003)-Math.max(0,xmin-.003),h:Math.min(1,ymax+.003)-Math.max(0,ymin-.003),kind:label};
-    if(safeMasks([region]).length){masks.push(region);labels.push(label);}
-   }
+   try{
+    const result=await env.AI.run('@cf/moondream/moondream3.1-9B-A2B',{task:'detect',image,target,max_objects:8,stream:false});
+    for(const o of (result?.objects||[])){
+     const xmin=Number(o.x_min),ymin=Number(o.y_min),xmax=Number(o.x_max),ymax=Number(o.y_max);
+     if(![xmin,ymin,xmax,ymax].every(Number.isFinite)||xmin<0||ymin<0||xmax>1||ymax>1||xmin>=xmax||ymin>=ymax)continue;
+     const region={x:Math.max(0,xmin-.003),y:Math.max(0,ymin-.003),w:Math.min(1,xmax+.003)-Math.max(0,xmin-.003),h:Math.min(1,ymax+.003)-Math.max(0,ymin-.003),kind:label};
+     if(safeMasks([region]).length){masks.push(region);labels.push(label);}
+    }
+   }catch(e){failed.push(label);console.warn('DrFX image target unavailable: '+label);}
   }
-  return updateImageConfig(env,item.id,{...cfg,redactions:safeMasks(masks),detected_labels:[...new Set(labels)],scan_status:'needs_review',scan_note:masks.length?'نواحی احتمالی لینک/آیدی/لوگو پوشانده شدند؛ تصویر را پیش از انتشار بررسی کنید.':'برش بالا و پایین آماده است؛ اطلاعات تبلیغاتی احتمالی در تصویر را دستی بررسی کنید.'});
+  if(scanSettings.scanDepth==='deep'){
+   try{
+    const output=await env.AI.run('@cf/google/gemma-4-26b-a4b-it',{messages:[{role:'user',content:[
+      {type:'text',text:'Transcribe all legible text on the image including usernames, websites, social IDs, emails, phone numbers, entry, SL and TP. Do not guess unclear characters. Output plain text only.'},
+      {type:'image_url',image_url:{url:image}}
+    ]}],max_tokens:950,chat_template_kwargs:{enable_thinking:false}});
+    const ocr=String(output?.response||output?.result||'').slice(0,3000).trim();
+    if(ocr){
+      await env.DB.prepare("UPDATE inbox SET ocr_text=?,updated_at=unixepoch() WHERE id=? AND status IN ('review','failed')").bind(ocr,item.id).run();
+      labels.push(...detectIdentifiers(ocr,{website:CHANNEL_WEBSITE,handle:CHANNEL_HANDLE}).map(x=>'ocr:'+x.type));
+    }
+   }catch(e){failed.push('ocr');console.warn('DrFX deep OCR unavailable');}
+  }
+  const merged=safeMasks([...cfg.redactions,...masks]).filter((x,i,all)=>all.findIndex(z=>Math.abs(z.x-x.x)<.025&&Math.abs(z.y-x.y)<.025)===i).slice(0,10);
+  const note=merged.length?'شناسه، لینک یا لوگوی احتمالی شناسایی شد. ناحیه‌ها را در Visual Editor بررسی و تأیید کنید.':
+    failed.length>=targets.length?'اسکن در دسترس نبود؛ تصویر باید به‌صورت دستی بررسی شود.':
+    'شناسه‌ای شناسایی نشد؛ نبود شناسه تضمین نمی‌شود. تصویر را دستی بررسی کنید.';
+  return updateImageConfig(env,item.id,{...cfg,redactions:merged,detected_labels:[...new Set(labels)].slice(0,12),scan_status:'needs_review',scan_note:note});
  }catch(e){
   console.warn('DrFX image detect unavailable: '+String(e?.message||e).slice(0,160));
   return updateImageConfig(env,item.id,{...cfg,scan_status:'needs_review',scan_note:'اسکن خودکار کامل نشد؛ از برش و ماسک دستی استفاده کنید.'});
@@ -260,14 +285,16 @@ async function publish(env,item,text,{watermark=true,photoMode='watermark',setti
 const j=corslessJson;
 function opts(env,source){return {brandName:env.BRAND_NAME||'DR FX AI',website:env.BRAND_WEBSITE||'https://drfx.company',handle:env.BRAND_HANDLE||'',source,licensed:env.WHITE_LABEL_AUTHORIZED==='true'};}
 async function settings(env){
- const r=await env.DB.prepare("SELECT key,value FROM settings WHERE key IN ('brandName','website','handle','watermark','photoMode','autoPublish','emergencyStop','duplicateGuard','strictValidation')").all();
- const out=opts(env,'');for(const x of r.results||[])out[x.key]=(['watermark','autoPublish','emergencyStop','duplicateGuard','strictValidation'].includes(x.key))?x.value==='true':x.value;
- return {...out,emergencyStop:out.emergencyStop===true,duplicateGuard:out.duplicateGuard!==false,strictValidation:out.strictValidation!==false,autoPublish:out.autoPublish===true,watermark:out.watermark??true,photoMode:out.photoMode==='card'?'card':'watermark',authorized:env.WHITE_LABEL_AUTHORIZED==='true',channelConfigured:Boolean(env.DESTINATION_CHAT_ID)};
+ const r=await env.DB.prepare("SELECT key,value FROM settings WHERE key IN ('brandName','website','handle','watermark','photoMode','autoPublish','emergencyStop','duplicateGuard','strictValidation','scanDepth','identityGuard')").all();
+ const out=opts(env,'');for(const x of r.results||[])out[x.key]=(['watermark','autoPublish','emergencyStop','duplicateGuard','strictValidation','identityGuard'].includes(x.key))?x.value==='true':x.value;
+ return {...out,emergencyStop:out.emergencyStop===true,duplicateGuard:out.duplicateGuard!==false,strictValidation:out.strictValidation!==false,autoPublish:out.autoPublish===true,watermark:out.watermark??true,photoMode:out.photoMode==='card'?'card':'watermark',scanDepth:out.scanDepth==='deep'?'deep':'balanced',identityGuard:out.identityGuard!==false,authorized:env.WHITE_LABEL_AUTHORIZED==='true',channelConfigured:Boolean(env.DESTINATION_CHAT_ID)};
 }
 async function checkAdmin(req,env){const raw=req.headers.get('X-Telegram-Init-Data')||'';return validateInitData(raw,env.BOT_TOKEN,env.ADMIN_TELEGRAM_USER_ID);}
 async function jsonBody(req){if(Number(req.headers.get('content-length')||0)>16000)throw Error('Request body too large');const text=await req.text();if(text.length>16000)throw Error('Request body too large');return JSON.parse(text);}
 async function getItem(env,id){if(!/^\d+$/.test(id))return null;return env.DB.prepare('SELECT * FROM inbox WHERE id=?').bind(Number(id)).first();}
-function view(item){if(!item)return null;const {id,content_type,file_id,original_text,draft_text,ocr_text,signal_json,status,created_at,destination_message_id,error,publish_attempts}=item;return {id,content_type,has_photo:Boolean(file_id),source_label:'سیگنال دریافتی',original_text,draft_text:stripSourceLine(draft_text),ocr_text,signal:signal_json?JSON.parse(signal_json):null,category:channelCategory(original_text,signal_json?JSON.parse(signal_json):null),status,created_at,destination_message_id,error,publish_attempts:publish_attempts||0,recovery:recoveryState(item)};}
+function view(item){if(!item)return null;const {id,content_type,file_id,original_text,draft_text,ocr_text,signal_json,status,created_at,destination_message_id,error,publish_attempts}=item;const own={website:CHANNEL_WEBSITE,handle:CHANNEL_HANDLE};
+ const identifiers=[...detectIdentifiers(original_text,own).map(x=>({...x,source:'text'})),...detectIdentifiers(ocr_text,own).map(x=>({...x,source:'ocr'}))].slice(0,30);
+ return {identifiers,id,content_type,has_photo:Boolean(file_id),source_label:'سیگنال دریافتی',original_text,draft_text:stripSourceLine(draft_text),ocr_text,signal:signal_json?JSON.parse(signal_json):null,category:channelCategory(original_text,signal_json?JSON.parse(signal_json):null),status,created_at,destination_message_id,error,publish_attempts:publish_attempts||0,recovery:recoveryState(item)};}
 
 
 function channelCategory(input,sig){const t=toAscii(String(input||'')).toUpperCase();const sym=sig?.symbol||(t.match(/\b(XAUUSD|GOLD|BTCUSD|ETHUSD|EURUSD|GBPUSD|USDJPY|XAGUSD)\b/)||[])[1]||'';return {kind:/\b(CPI|FOMC|NFP|NEWS|BREAKING)\b|اخبار|خبر/.test(t)?'News':sig?'Signal':/\b(ANALYSIS|OUTLOOK|FVG|ZONE|IDEA|UPDATE|POI)\b|تحلیل|بررسی/.test(t)?'Analysis':'Update',market:/BTC|ETH|BITCOIN|CRYPTO|USDT/.test(t)?'Crypto':/XAU|XAG|GOLD|SILVER/.test(t)?'Metals':/FOREX|EURUSD|GBPUSD|USDJPY/.test(t)?'Forex':'General',symbol:sym==='GOLD'?'XAUUSD':sym};}
@@ -287,6 +314,11 @@ async function publishRow(env,row,s,disableWatermark=false,photoBytes=null){
  if(!row||row.status!=='review')throw Error('Item not available for publishing');
  if(s.duplicateGuard){const duplicate=await findRecentDuplicate(env,row.original_text,row.id);if(duplicate&&['sent','sending','review'].includes(duplicate.status))throw Error('Duplicate of recent message #'+duplicate.id);}
  if(s.strictValidation!==false && /\b(?:BUY|SELL)\s+(?:NOW|MARKET)\b/i.test(String(row.original_text||'')) && !parseSignal(row.draft_text))throw Error('Active trading signal needs verified Entry, SL and TP');
+ if(s.identityGuard!==false){
+  const outgoing=formatChannelPost(row.draft_text,s);
+  if(detectIdentifiers(outgoing,{website:CHANNEL_WEBSITE,handle:CHANNEL_HANDLE}).some(x=>!x.own))
+   throw Error('External identifier detected in prepared post; check Pro identity review');
+ }
  if(row.file_id){if((await imageConfig(env,row.id)).scan_status!=='approved')throw Error('Approve cleaned photo in Mini App');if(!photoBytes)throw Error('Use Mini App to publish edited image');}
  const lock=await env.DB.prepare("UPDATE inbox SET status='sending',error=NULL,publish_attempts=publish_attempts+1,updated_at=unixepoch() WHERE id=? AND status='review'").bind(row.id).run();
  if(!lock.meta.changes)throw Error('Already processing or published');
@@ -441,7 +473,7 @@ async function handleApi(req,env,path){
   return j({settings:s,totals,items:(rows.results||[]).map(view)});
  }
  if(path==='/api/settings'&&method==='POST'){
-  const b=await jsonBody(req);const fields={brandName:String(b.brandName||'').trim().slice(0,48),website:String(b.website||'').trim().slice(0,110),handle:String(b.handle||'').trim().slice(0,45),watermark:b.watermark===false?'false':'true',photoMode:b.photoMode==='card'?'card':'watermark',autoPublish:b.autoPublish===true?'true':'false',emergencyStop:b.emergencyStop===true?'true':'false',duplicateGuard:b.duplicateGuard===false?'false':'true',strictValidation:b.strictValidation===false?'false':'true'};
+  const b=await jsonBody(req);const fields={brandName:String(b.brandName||'').trim().slice(0,48),website:String(b.website||'').trim().slice(0,110),handle:String(b.handle||'').trim().slice(0,45),watermark:b.watermark===false?'false':'true',photoMode:b.photoMode==='card'?'card':'watermark',autoPublish:b.autoPublish===true?'true':'false',emergencyStop:b.emergencyStop===true?'true':'false',duplicateGuard:b.duplicateGuard===false?'false':'true',strictValidation:b.strictValidation===false?'false':'true',scanDepth:b.scanDepth==='deep'?'deep':'balanced',identityGuard:b.identityGuard===false?'false':'true'};
   if(!fields.brandName||!/^https:\/\/[a-z0-9.-]+(?:[/:?#][^\s]*)?$/i.test(fields.website))return j({error:'Invalid brand name or HTTPS website'},400);
   if(fields.handle && !/^@[a-zA-Z0-9_]{5,32}$/.test(fields.handle))return j({error:'Invalid Telegram handle'},400);
   for(const [key,value] of Object.entries(fields))await env.DB.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').bind(key,value).run();
