@@ -11,10 +11,10 @@ const samples=[
  {id:101,content_type:'text',has_photo:false,source_label:'Demo Feed',original_text:'Gold sell 3917 SL 3924 TP1 3909',draft_text:'✦ DR FX AI | PREMIUM SIGNALS\n\n📈 XAUUSD  •  🔴 SELL\n📍 Entry 3917\n🛑 SL 3924\n🎯 TP1 3909\n🌐 https://drfx.company\nSource: Demo Feed',ocr_text:'',status:'sent',created_at:1730499000,signal:{symbol:'XAUUSD',side:'SELL',entry:3917,sl:3924,tps:[3909],rr:1.14}}
 ];
 const state={items:[],selected:null,filter:'all',page:'home',isEditing:false,settings:{brandName:'DR FX AI',website:'https://drfx.company',handle:'',watermark:true,photoMode:'watermark',autoPublish:true,authorized:false,channelConfigured:true,scanDepth:'balanced',identityGuard:true}};
-let busy=false,toastTimer,inboxMode='fast';
+let busy=false,toastTimer,inboxMode='fast',proPanel='content',proQueueOpen=false;
 const fastMode=createFastMode({
  el,state,selected,esc,toast,isBusy:()=>busy,refresh:()=>load(),
- goPro:(id)=>{state.selected=id;setEdit(false);page('pro');render();},
+ goPro:(id,panel)=>{if(hasUnsavedDraft()){toast('ابتدا تغییرات متن را ذخیره کنید.');return;}state.selected=id;setEdit(false);proQueueOpen=false;page('pro');setProPanel(panel||((state.items.find(x=>x.id===id)?.has_photo)?'media':'content'),{force:true});render();},
  publish:async(id)=>{state.selected=id;setEdit(false);await mutation('publish');}
 });
 function toast(text){const e=el('toast');e.textContent=text;e.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('show'),3300);}
@@ -26,7 +26,7 @@ function selected(){return state.items.find(x=>x.id===state.selected)||null;}
 function setBusy(v){busy=v;for(const id of ['ocrBtn','regenBtn','saveDraft','publishBtn','rejectBtn','confirmPublish'])el(id).disabled=v||(!selected()&&id!=='confirmPublish');renderHome();}
 function updateTotals(){const total=state.items.length,sent=state.items.filter(x=>x.status==='sent').length,review=state.items.filter(x=>x.status==='review'||x.status==='failed').length,photos=state.items.filter(x=>x.has_photo).length;el('numTotal').textContent=total;el('numPending').textContent=review;el('numSent').textContent=sent;el('numPhotos').textContent=photos;el('sidePending').textContent=review;el('inboxCount').textContent=review+' نیازمند بررسی';if(el('mobilePending')){el('mobilePending').textContent=review;el('mobilePending').hidden=review===0;}}
 function renderList(){el('deleteAllBtn').disabled=busy||!state.items.length;const items=state.items.filter(i=>state.filter==='all'||(state.filter==='photo'?i.has_photo:state.filter==='review'?['review','failed'].includes(i.status):i.status===state.filter));const root=el('itemList');root.replaceChildren();if(!items.length){root.innerHTML='<div class="noitems"><div class="empty-icon">◌</div>پیامی در این بخش وجود ندارد.<br><small>سیگنال را برای ربات فوروارد کنید.</small></div>';return;}
- for(const x of items){const btn=document.createElement('button');btn.type='button';btn.className='item '+(x.id===state.selected?'selected':'');btn.innerHTML=`<span class="symbol ${x.has_photo?'photo':x.signal?.side==='BUY'?'buy':''}">${esc(initials(x))}</span><span class="item-body"><span class="item-top"><span dir="ltr">${esc(itemTitle(x))}</span><span class="status ${esc(x.status)}">${esc(statusFa(x.status)+(x.status==='sent'&&x.destination_message_id?' #'+x.destination_message_id:''))}</span></span><span class="item-bottom"><span>${esc(x.source_label||'بدون منبع')}</span><span>${x.has_photo?'◈ تصویر':'⌁ متن'}</span></span></span>`;btn.addEventListener('click',()=>{state.selected=x.id;setEdit(false);render();if(innerWidth<700)el('previewBox').scrollIntoView({behavior:'smooth',block:'center'});});root.append(btn);}}
+ for(const x of items){const btn=document.createElement('button');btn.type='button';btn.className='item '+(x.id===state.selected?'selected':'');btn.innerHTML=`<span class="symbol ${x.has_photo?'photo':x.signal?.side==='BUY'?'buy':''}">${esc(initials(x))}</span><span class="item-body"><span class="item-top"><span dir="ltr">${esc(itemTitle(x))}</span><span class="status ${esc(x.status)}">${esc(statusFa(x.status)+(x.status==='sent'&&x.destination_message_id?' #'+x.destination_message_id:''))}</span></span><span class="item-bottom"><span>${esc(x.source_label||'بدون منبع')}</span><span>${x.has_photo?'◈ تصویر':'⌁ متن'}</span></span></span>`;btn.addEventListener('click',()=>{if(hasUnsavedDraft()){toast('ابتدا تغییرات متن را ذخیره کنید.');return;}state.selected=x.id;setEdit(false);proQueueOpen=false;setProPanel(x.has_photo?'media':'content',{force:true});render();if(innerWidth<740)el('proWorkspaceTabs').scrollIntoView({behavior:'smooth',block:'start'});});root.append(btn);}}
 function setEdit(value){state.isEditing=value;el('previewBox').classList.toggle('editmode',value);el('tabEdit').classList.toggle('active',value);el('tabPreview').classList.toggle('active',!value);el('saveDraft').style.display=value?'inline-flex':'none';}
 async function loadPhoto(x){
  const img=el('photoPreview');img.removeAttribute('src');
@@ -329,6 +329,8 @@ function renderHome(){
  const ago=x?.created_at?Math.max(0,Math.floor((Date.now()-Number(x.created_at)*1000)/60000)):null;
  el('homeItemAge').textContent=!x?'—':demo?'نمونه نمایشی':ago<1?'همین الان':ago<60?ago+' دقیقه پیش':ago<1440?Math.floor(ago/60)+' ساعت پیش':'پیام اخیر';
  el('homeSymbol').textContent=x?.signal?.symbol|| (x?.has_photo?'پیام تصویری':x?'پیام دریافتی':'منتظر دریافت پیام');
+ el('homeArtSymbol').textContent=x?.signal?.symbol||'DR FX AI';
+ el('homeArtType').textContent=x?.has_photo?'تصویر ارسالی':x?.signal?.side==='BUY'?'سیگنال خرید':x?.signal?.side==='SELL'?'سیگنال فروش':'محتوای دریافتی';
  const side=el('homeSide');side.textContent=x?.signal?.side|| (x?.has_photo?'IMAGE':'REVIEW');side.dataset.side=x?.signal?.side||'OTHER';
  el('homeEntry').textContent=x?.signal?.entryZone||x?.signal?.entry||'—';
  el('homeStop').textContent=x?.signal?.sl||'—';
@@ -344,19 +346,63 @@ function renderHome(){
  const risk=el('homeSafety');risk.dataset.level=!x?'idle':x.status==='failed'?'error':x.has_photo?'review':x.signal?'ready':'review';
  el('homeSafetyText').textContent=!x?'دستیار آماده دریافت پیام است.':x.status==='sent'?'این پیام قبلاً منتشر شده است.':x.status==='failed'?'وضعیت ارسال نیازمند بررسی در Pro است.':x.has_photo?'تصویر پیش از انتشار به تأیید دستی نیاز دارد.':x.signal?'فیلدهای معاملاتی تشخیص داده شده‌اند؛ پیش از انتشار بررسی کنید.':'پیام باید در بخش Pro بازبینی شود.';
  const can=homeCanPublish(x),publish=el('homePublish');
- publish.disabled=!x||busy||x.status==='sent'||x.status==='sending'||state.settings.emergencyStop;
- publish.textContent=!x?'↗ انتشار':can?'↗ انتشار':x?.has_photo?'◉ بازبینی تصویر':'◉ بررسی در Pro';
+ publish.disabled=!x||busy||x.status==='sending'||(can&&state.settings.emergencyStop);
+ publish.dataset.action=can?'publish':x?.has_photo?'media':x?.status==='failed'?'recover':x?.status==='sent'?'result':'review';
+ publish.textContent=!x?'↗ انتشار':can?'↗ انتشار':x?.status==='failed'?'↻ بررسی ارسال':x?.status==='sent'?'◉ مشاهده نتیجه':x?.has_photo?'◉ بازبینی تصویر':'◉ بررسی محتوا';
  el('homeEdit').disabled=!x||busy;
  el('homePreview').disabled=!x||busy;
  el('homeGuardTitle').textContent=state.settings.emergencyStop?'انتشار اضطراری متوقف است': 'کنترل محتوا فعال است';
  el('homeGuardDetails').textContent= x?.has_photo?'OCR و پاکسازی تصویری تنها پس از تأیید شما قابل انتشارند.':'کنترل شناسه‌های خارجی و جلوگیری از انتشار تکراری فعال است.';
 }
 
-function render(){renderCommandCenter();updateTotals();renderList();renderEditor();renderIdentityAudit();fastMode.render();renderHome();}
+function hasUnsavedDraft(){
+ const current=selected();
+ return !!current&&state.isEditing&&el('draftEdit').value!==String(current.draft_text||'');
+}
+const PRO_PANEL_LABELS={
+ content:'متن پیام و سطوح معامله را بررسی کنید.',
+ media:'تصویر را اسکن، پاکسازی و قبل از انتشار تأیید کنید.',
+ identity:'شناسه‌های شناسایی‌شده و ابزارهای استانداردسازی را بررسی کنید.',
+ publish:'وضعیت نهایی و ایمنی انتشار را کنترل کنید.'
+};
+function renderProWorkspace(){
+ const work=el('workbench');
+ if(!work)return;
+ work.dataset.proPanel=proPanel;
+ work.classList.toggle('pro-queue-open',proQueueOpen);
+ const toggle=el('proToggleQueue');toggle.setAttribute('aria-expanded',String(proQueueOpen));
+ toggle.textContent=proQueueOpen?'× بستن صندوق':'▣ انتخاب پیام';
+ for(const button of document.querySelectorAll('[data-pro-tab]')){
+  const active=button.dataset.proTab===proPanel;
+  button.classList.toggle('active',active);
+  button.setAttribute('aria-selected',String(active));
+  button.tabIndex=active?0:-1;
+ }
+ el('proPanelHint').textContent=PRO_PANEL_LABELS[proPanel];
+ const x=selected();
+ el('proSelectedSummary').textContent=x?'#'+x.id+' · '+itemTitle(x)+' · '+statusFa(x.status):'پیامی انتخاب نشده است';
+ el('proMediaPlaceholder').hidden=Boolean(x?.has_photo);
+ el('proScanShortcut').disabled=el('ocrBtn').disabled||busy;
+ el('proRegenerateShortcut').disabled=el('regenBtn').disabled||busy;
+ const summary=el('proPublishSummary');
+ const sig=x?.signal;
+ const label=sig?sig.symbol+' · '+sig.side+' · Entry '+(sig.entryZone||sig.entry)+' · SL '+sig.sl+' · '+sig.tps.filter(Number.isFinite).map((n,i)=>'TP'+(i+1)+' '+n).join(' / '):'بدون سیگنال ساختاریافته';
+ summary.textContent=!x?'برای انتشار، ابتدا یک پیام را انتخاب کنید.':'پیام #'+x.id+' | '+statusFa(x.status)+' | '+(x.has_photo?'تأیید تصویر الزامی است':'پیام متنی')+' | '+label;
+}
+function setProPanel(panel,{force=false}={}){
+ if(!Object.hasOwn(PRO_PANEL_LABELS,panel))return false;
+ if(!force&&panel!=='content'&&hasUnsavedDraft()){toast('ابتدا تغییرات متن را ذخیره کنید.');return false;}
+ proPanel=panel;
+ renderProWorkspace();
+ return true;
+}
+
+function render(){renderCommandCenter();updateTotals();renderList();renderEditor();renderIdentityAudit();fastMode.render();renderHome();renderProWorkspace();}
 function page(input){
  const name=input==='dashboard'?'home':input==='inbox'?inboxMode:input;
  if(!['home','fast','pro','settings'].includes(name))return;
  if(name==='fast'||name==='pro')inboxMode=name;
+ if(name==='pro'&&!proPanel)proPanel='content';
  state.page=name;
  document.body.dataset.workspace=name;
  for(const p of document.querySelectorAll('.page'))p.classList.toggle('active',p.id===name);
@@ -455,18 +501,46 @@ el('dashGoInbox').addEventListener('click',()=>openCommandInbox(false));
 el('dashGoSettings').addEventListener('click',()=>page('settings'));
 el('dashPause').addEventListener('click',()=>updateSmartSetting('emergencyStop'));
 el('dashOpenLatest').addEventListener('click',()=>{const x=state.items[0];if(!x)return;state.selected=x.id;openCommandInbox(false);if(window.innerWidth<700)el('previewBox').scrollIntoView({behavior:'smooth',block:'start'});});
-function showHomeItem(inEdit=false){
+function showHomeItem(inEdit=false,panel='content'){
  const x=homeItem();if(!x)return;
- state.selected=x.id;page('pro');setEdit(inEdit);render();
- if(window.innerWidth<740){requestAnimationFrame(()=>el('previewBox').scrollIntoView({behavior:'smooth',block:'start'}));}
+ if(hasUnsavedDraft()){toast('ابتدا تغییرات متن را ذخیره کنید.');return;}
+ state.selected=x.id;
+ proQueueOpen=false;
+ page('pro');
+ setEdit(inEdit);
+ setProPanel(panel,{force:true});
+ render();
+ if(window.innerWidth<740)requestAnimationFrame(()=>el('proWorkspaceTabs').scrollIntoView({behavior:'smooth',block:'start'}));
 }
 el('homeOpenInbox').addEventListener('click',()=>page('inbox'));
-el('homeEdit').addEventListener('click',()=>showHomeItem(true));
-el('homePreview').addEventListener('click',()=>showHomeItem(false));
+el('homeEdit').addEventListener('click',()=>showHomeItem(true,'content'));
+el('homePreview').addEventListener('click',()=>showHomeItem(false,'content'));
 el('homePublish').addEventListener('click',async()=>{
  if(busy)return;
  const x=homeItem();if(!x)return;
- if(!homeCanPublish(x)){showHomeItem(false);return;}
- state.selected=x.id;setEdit(false);await mutation('publish');
+ if(!homeCanPublish(x)){
+  showHomeItem(false,x.has_photo?'media':x.status==='sent'||x.status==='failed'?'publish':'content');
+  return;
+ }
+ state.selected=x.id;
+ setEdit(false);
+ await mutation('publish');
 });
+el('proToggleQueue').addEventListener('click',()=>{
+ if(hasUnsavedDraft()){toast('ابتدا تغییرات متن را ذخیره کنید.');return;}
+ proQueueOpen=!proQueueOpen;renderProWorkspace();
+});
+for(const button of document.querySelectorAll('[data-pro-tab]')){
+ button.addEventListener('click',()=>{setProPanel(button.dataset.proTab);});
+ button.addEventListener('keydown',e=>{
+  if(!['ArrowLeft','ArrowRight'].includes(e.key))return;
+  e.preventDefault();
+  const tabs=[...document.querySelectorAll('[data-pro-tab]')],i=tabs.indexOf(button);
+  const offset=e.key==='ArrowLeft'?-1:1,next=tabs[(i+offset+tabs.length)%tabs.length];
+  if(setProPanel(next.dataset.proTab))next.focus();
+ });
+}
+el('proScanShortcut').addEventListener('click',()=>{if(!el('ocrBtn').disabled)el('ocrBtn').click();});
+el('proRegenerateShortcut').addEventListener('click',()=>{if(!el('regenBtn').disabled)el('regenBtn').click();});
+
 fastMode.init();page('home');setConnection('loading');syncSettings();renderHome();load();
