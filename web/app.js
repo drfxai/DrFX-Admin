@@ -386,7 +386,7 @@ function renderProWorkspace(){
  el('proRegenerateShortcut').disabled=el('regenBtn').disabled||busy;
  const summary=el('proPublishSummary');
  const sig=x?.signal;
- const label=sig?sig.symbol+' · '+sig.side+' · Entry '+(sig.entryZone||sig.entry)+' · SL '+sig.sl+' · '+sig.tps.filter(Number.isFinite).map((n,i)=>'TP'+(i+1)+' '+n).join(' / '):'بدون سیگنال ساختاریافته';
+ const label=sig?sig.symbol+' · '+sig.side+' · Entry '+(sig.entryZone||sig.entry)+' · SL '+sig.sl+' · '+(Array.isArray(sig.tps)?sig.tps:[]).filter(Number.isFinite).map((n,i)=>'TP'+(i+1)+' '+n).join(' / '):'بدون سیگنال ساختاریافته';
  summary.textContent=!x?'برای انتشار، ابتدا یک پیام را انتخاب کنید.':'پیام #'+x.id+' | '+statusFa(x.status)+' | '+(x.has_photo?'تأیید تصویر الزامی است':'پیام متنی')+' | '+label;
 }
 function setProPanel(panel,{force=false}={}){
