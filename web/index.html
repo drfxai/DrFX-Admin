@@ -84,43 +84,74 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 @media(max-width:700px){.visual-workspace{padding:10px;border-radius:13px;margin:10px 0}.visual-heading strong{font-size:11px}.visual-instruction{font-size:10px}.recovery-panel{margin:9px 10px;padding:12px}.recovery-actions .btn{min-width:120px;font-size:11px}}
 .visual-mask-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.visual-mask-chip{border:1px solid rgba(250,125,148,.35);background:rgba(117,46,65,.24);color:#f6c4cf;font-size:10px;border-radius:8px;padding:5px 9px}.visual-mask-chip:hover{border-color:#f5a3b3}.visual-mask-chip:disabled{opacity:.45}.command-alert{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;margin-top:12px;border:1px solid rgba(239,136,116,.4);border-radius:14px;background:linear-gradient(115deg,rgba(124,41,61,.26),rgba(32,45,65,.87))}.command-alert[hidden]{display:none!important}.command-alert strong{display:block;color:#ffd3bb;font-size:12px}.command-alert small{display:block;color:#b2bccc;font-size:10px;margin-top:3px}.command-alert .btn{font-size:11px}.visual-mode-hint{font-size:10px;color:#8cd8e6;margin:0 0 10px}.visual-workspace.is-card-mode{border-color:rgba(240,201,133,.23)}@media(max-width:700px){.command-alert{padding:10px;gap:8px}.command-alert .btn{min-width:130px}}</style>
 <link rel="stylesheet" href="./fast-pro.css?v=1.0.0"/>
+<link rel="stylesheet" href="./luxury.css?v=0.4.0"/>
 </head>
 <body>
 <div class="shell">
  <aside class="side">
-  <div class="brand"><div class="logo">D<span style="color:#fff">F</span></div><div><h1>DrFX Admin</h1><p>SIGNAL COMMAND</p></div></div>
-  <div class="menu-title">WORKSPACE</div>
-  <nav class="nav" aria-label="Navigation">
-<button class="nav-btn active" data-page="fast"><span class="ni">⚡</span><span>Fast · انتشار سریع</span><b class="pill" id="sidePending">0</b></button>
-<button class="nav-btn" data-page="pro"><span class="ni">✦</span><span>Pro · استودیوی پیشرفته</span></button>
-<button class="nav-btn" data-page="dashboard"><span class="ni">▦</span><span>داشبورد</span></button>
-<button class="nav-btn" data-page="inbox"><span class="ni">▣</span><span>همه پیام‌ها</span></button>
-<button class="nav-btn" data-page="settings"><span class="ni">⚙</span><span>تنظیمات و هوش ربات</span></button>
-</nav>
+  <div class="brand"><div class="logo">D<span style="color:#fff">F</span></div><div><h1>DrFX <span>Admin</span></h1><p>CHANNEL ASSISTANT</p></div></div>
+  <div class="menu-title">CHANNEL ASSISTANT</div>
+  <nav class="nav" aria-label="بخش‌های اصلی">
+   <button class="nav-btn active" data-page="home"><span class="ni">⌂</span><span>خانه</span></button>
+   <button class="nav-btn" data-page="inbox"><span class="ni">▣</span><span>صندوق پیام‌ها</span><b class="pill" id="sidePending">0</b></button>
+   <button class="nav-btn" data-page="settings"><span class="ni">⚙</span><span>تنظیمات</span></button>
+  </nav>
   <div class="side-bot"><div class="live"><span class="dot"></span>GUARDED PUBLISH</div><div style="font-weight:900;margin-top:12px">DrFX AI Engine</div><small>Worker-based • Cloudflare Free</small></div>
  </aside>
  <main class="main">
-  <header class="topbar"><div><div class="eyebrow">DRFXAI / CONTROL PANEL <span class="demo-label">DEMO MODE</span></div><h1 class="headline" id="pageTitle">Fast Signal Desk</h1><p class="subtitle">DrFX Admin — کنترل هوشمند انتشار سیگنال‌ها</p></div><div class="head-actions"><div class="header-dot"><span class="dot"></span>APP READY</div><button class="iconbtn" id="reloadBtn" aria-label="Refresh">↻</button><div class="avatar">DF</div></div><div class="mode-switch" role="group" aria-label="Select workspace mode"><button type="button" class="active" data-page="fast">⚡ FAST</button><button type="button" data-page="pro">✦ PRO</button></div></header>
-<section class="page active fast-page" id="fast" aria-label="Fast signal publication">
- <div class="fast-hero">
-  <div><div class="fx-kicker"><i aria-hidden="true"></i> FAST SIGNAL OPERATIONS</div>
-  <h2>بررسی سریع. <em>انتشار یک‌کلیکی.</em></h2>
-  <p>یک نگاه به نماد، ورود، حد ضرر و تارگت‌ها؛ سپس انتشار مستقیم سیگنال‌های متنی معتبر. تصاویر و موارد مبهم به Pro منتقل می‌شوند.</p>
-  <div class="fx-mode-caps"><span>ONE-TAP PUBLISH</span><span>GUARDED DELIVERY</span><span id="fastStatus">در حال همگام‌سازی</span></div></div>
-  <div class="fast-hero-num"><strong id="fastReadyNumber">0</strong><span>READY NOW</span></div>
+  <header class="topbar">
+   <div class="mobile-brand"><span class="mobile-logo">DF</span><div><strong>DrFX <em>Admin</em></strong><small>CHANNEL ASSISTANT</small></div></div>
+   <div class="topbar-copy"><div class="eyebrow">DRFXAI / CONTENT OPERATIONS <span class="demo-label">DEMO MODE</span></div><h1 class="headline" id="pageTitle">دستیار کانال</h1><p class="subtitle">ویرایش، استانداردسازی و انتشار سریع</p></div>
+   <div class="head-actions"><div class="header-dot" id="headerConnection" aria-live="polite"><span class="dot"></span><span id="connectionText">در حال اتصال</span></div><button class="iconbtn" id="reloadBtn" type="button" aria-label="بارگذاری مجدد">↻</button><div class="avatar" title="DrFX Admin">DF</div></div>
+  </header>
+
+<section class="page active assistant-home" id="home" aria-label="خانه دستیار">
+ <div class="assistant-hero">
+   <div class="assistant-hero-copy">
+     <div class="assistant-eyebrow">CHANNEL ASSISTANT <span class="assistant-eyebrow-line"></span></div>
+     <h2>انتشار حرفه‌ای، <em>بدون پیچیدگی.</em></h2>
+     <p>دریافت <span>·</span> ویرایش <span>·</span> پاکسازی <span>·</span> انتشار</p>
+   </div>
+   <svg class="assistant-candles" viewBox="0 0 330 175" fill="none" aria-hidden="true"><defs><linearGradient id="goldCandle" x1="0" x2="1"><stop stop-color="#936331"/><stop offset=".5" stop-color="#fbe4ae"/><stop offset="1" stop-color="#ac7536"/></linearGradient></defs><path d="M4 145C50 152 72 99 110 116S176 90 205 92S272 18 326 25" stroke="#D9AF67" stroke-width="2" opacity=".38"/><g stroke="#F1D7A3" stroke-width="2"><path d="M77 110V60M116 109V37M158 86V30M202 91V18M246 68V8M288 53V5"/></g><g fill="url(#goldCandle)"><rect x="66" y="83" width="22" height="44" rx="2"/><rect x="105" y="57" width="22" height="45" rx="2"/><rect x="147" y="41" width="22" height="37" rx="2"/><rect x="191" y="32" width="22" height="49" rx="2"/><rect x="235" y="20" width="22" height="41" rx="2"/><rect x="277" y="15" width="22" height="29" rx="2"/></g></svg>
  </div>
+ <div class="assistant-home-status">
+  <div class="assistant-home-status-main"><span class="assistant-live-dot"></span><strong id="homeQueueStatus">در حال آماده‌سازی</strong><span id="homeQueueCaption">صندوق پیام‌ها</span></div>
+  <button type="button" id="homeOpenInbox" class="assistant-link">مشاهده صندوق <span aria-hidden="true">←</span></button>
+ </div>
+ <section class="assistant-featured" aria-label="پیام منتخب برای انتشار">
+  <header class="assistant-featured-head"><div class="assistant-featured-id"><span id="homeItemId">—</span><span class="assistant-featured-state" id="homeItemState">در انتظار</span></div><span class="assistant-featured-time" id="homeItemAge">—</span></header>
+  <div class="assistant-featured-body">
+   <div class="assistant-featured-chart" aria-hidden="true"><svg viewBox="0 0 180 200" fill="none"><defs><linearGradient id="chartGold" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d29b4f" stop-opacity=".30"/><stop offset="1" stop-color="#ffe1a0" stop-opacity=".02"/></linearGradient></defs><path d="M6 180L26 143L44 149L60 116L83 123L106 91L128 96L151 47L173 21" stroke="#d0a263" stroke-width="2"/><path d="M6 180L26 143L44 149L60 116L83 123L106 91L128 96L151 47L173 21V200H6Z" fill="url(#chartGold)"/><g stroke="#f7d596" stroke-width="1.8"><path d="M24 137V161M61 110V138M106 82V110M151 39V67"/></g><g fill="#f0c580"><rect x="18" y="142" width="13" height="14" rx="2"/><rect x="55" y="115" width="13" height="17" rx="2"/><rect x="100" y="91" width="13" height="15" rx="2"/><rect x="145" y="47" width="13" height="15" rx="2"/></g></svg><span>DR FX AI</span></div>
+   <div class="assistant-featured-content">
+    <div class="assistant-featured-title"><strong id="homeSymbol">منتظر دریافت پیام</strong><span id="homeSide" class="assistant-side">—</span></div>
+    <div class="assistant-signal-levels"><div><span>ENTRY</span><strong id="homeEntry">—</strong></div><div><span>STOP LOSS</span><strong id="homeStop">—</strong></div></div>
+    <div class="assistant-targets" id="homeTargets"></div>
+    <div class="assistant-draft-small" id="homeExcerpt">اولین پیام را به ربات ارسال کنید تا برای بررسی نمایش داده شود.</div>
+   </div>
+  </div>
+  <div class="assistant-safety" id="homeSafety"><span class="assistant-safety-icon">✓</span><span id="homeSafetyText">کنترل ایمنی قبل از انتشار فعال است.</span></div>
+  <div class="assistant-actions">
+    <button type="button" class="assistant-button assistant-secondary" id="homeEdit">✎ ویرایش</button>
+    <button type="button" class="assistant-button assistant-secondary" id="homePreview">◉ پیش‌نمایش</button>
+    <button type="button" class="assistant-button assistant-primary" id="homePublish">↗ انتشار</button>
+  </div>
+ </section>
+ <div class="assistant-home-foot"><div class="assistant-foot-icon">✓</div><div><strong id="homeGuardTitle">کنترل محتوا فعال است</strong><small id="homeGuardDetails">تأیید قیمت‌ها و شناسایی شناسه‌های تبلیغاتی قبل از انتشار</small></div></div>
+</section>
+<div class="assistant-mode-switch" id="assistantModeSwitch" role="group" aria-label="حالت بررسی پیام‌ها">
+ <button type="button" class="active" data-page="fast"><span>⚡ Fast</span><small>بررسی سریع</small></button>
+ <button type="button" data-page="pro"><span>✦ Pro</span><small>ویرایش حرفه‌ای</small></button>
+</div>
+<section class="page fast-page" id="fast" aria-label="Fast signal publication">
+ <div class="assistant-page-heading"><div><span class="assistant-section-label">INBOX / FAST</span><h2>صندوق پیام‌ها</h2><p>سیگنال‌های جدید را مرور و با یک اقدام منتشر کنید.</p></div><div class="assistant-heading-count"><strong id="fastReadyNumber">0</strong><span>آماده انتشار</span></div></div>
+ <div class="assistant-inbox-status" id="fastStatus">در حال همگام‌سازی</div>
  <div class="fast-toolbar"><div class="fast-toolbar-title">صف سیگنال‌ها <small><span id="fastPendingCount">0</span> پیام در انتظار · <span id="fastImageCount">0</span> تصویر نیازمند بررسی</small></div>
   <div class="fast-filter" role="group" aria-label="Fast queue filter"><button type="button" class="active" data-fast-filter="review">در انتظار</button><button type="button" data-fast-filter="all">همه</button><button type="button" data-fast-filter="photo">تصاویر</button><button type="button" id="fastRefresh">↻</button></div>
  </div>
  <div id="fastQueue" class="fast-queue" aria-live="polite"></div>
 </section>
 <section class="page pro-page" id="pro">
- <div class="pro-hero">
- <div><div class="fx-kicker"><i aria-hidden="true"></i> PRO SIGNAL STUDIO</div><h2>دقت کامل. <em>کنترل پیشرفته.</em></h2>
- <p>ویرایش متن، تحلیل شناسه‌ها، OCR، تشخیص لینک‌های تصویری، ماسک هوشمند، قالب‌بندی، بازیابی ارسال و کنترل نهایی انتشار.</p>
- <div class="pro-feature-row"><span>IDENTITY INTELLIGENCE</span><span>VISUAL IMAGE EDITOR</span><span>AI ASSISTANT</span><span>SAFE RECOVERY</span></div>
- </div><button class="pro-action" type="button" data-page="settings">⚙ تنظیمات تخصصی</button>
- </div>
+ <div class="assistant-page-heading"><div><span class="assistant-section-label">INBOX / PRO</span><h2>استودیوی ویرایش</h2><p>پیام، تصویر و شناسه‌ها را دقیق بررسی کنید؛ سپس انتشار دهید.</p></div><span class="assistant-pro-mark">PRO</span></div>
 </section>
   <section class="page" id="dashboard">
 <div class="command-hero"><div class="command-hero-main"><span class="command-kicker"><span class="live-pulse"></span> DRFXAI / SIGNAL OPERATIONS</span><h2>مرکز فرمان <em>DrFX Admin</em></h2><p>دریافت، کنترل کیفیت، آماده‌سازی تصویر و انتشار هوشمند سیگنال‌ها در یک پنل.</p><div class="command-status-line"><span class="command-status-chip" id="dashStatus">در حال دریافت وضعیت</span><span class="command-safety-chip">Cloudflare Free</span></div></div><div class="command-insignia" aria-hidden="true"><div class="insignia-ring"><strong>DF</strong><span>SMART OPS</span></div></div></div>
@@ -132,7 +163,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <div class="stats"><div class="stat"><div class="stat-head">پیام‌های اخیر <span class="stat-icon">◫</span></div><div class="stat-val" id="numTotal">—</div><small>RECENT INBOX</small></div><div class="stat"><div class="stat-head">منتظر بررسی <span class="stat-icon">◷</span></div><div class="stat-val" id="numPending">—</div><small>REVIEW QUEUE</small></div><div class="stat"><div class="stat-head">منتشر شده <span class="stat-icon">✓</span></div><div class="stat-val" id="numSent">—</div><small>RECENT PUBLISHED</small></div><div class="stat"><div class="stat-head">پیام تصویری <span class="stat-icon">▧</span></div><div class="stat-val" id="numPhotos">—</div><small>PHOTO POSTS</small></div></div>
 <div class="command-alert" id="dashRecoveryAlert" hidden role="status"><div><strong>⚠️ انتشار نیازمند بررسی است</strong><small id="dashRecoveryCount">۱ پیام با خطای ارسال</small></div><button class="btn" id="dashRecoveryOpen" type="button">بازکردن بازیابی ↗</button></div><div class="command-lower"><div class="command-recent"><div class="section-mini-heading"><span>آخرین پیام دریافت‌شده</span><span class="recent-status" id="dashLatestStatus">—</span></div><div class="recent-message-title" id="dashLatestTitle">هنوز پیامی موجود نیست</div><p class="recent-message-meta" id="dashLatestMeta">یک سیگنال برای ربات ارسال کنید.</p><button class="recent-open" id="dashOpenLatest" type="button">مشاهده و مدیریت پیام ↗</button></div><div class="command-capacity"><div class="section-mini-heading"><span>ظرفیت صندوق</span><span class="capacity-ok">● کم‌مصرف</span></div><div class="capacity-number" id="dashUsage">— / ۵ <small>پیام</small></div><div class="capacity-bar" aria-hidden="true"><span id="dashUsageBar"></span></div><p>حداکثر پنج پیام در D1؛ بدون ذخیره فایل تصویر ویرایش‌شده در دیتابیس.</p></div></div></section>
 <section class="page" id="inbox"><div class="hero" style="min-height:117px"><div><span class="badgeb">SIGNAL INBOX</span><h2>صندوق سیگنال‌ها</h2><p>پیام‌ها را انتخاب و قبل از انتشار ویرایش و کنترل کنید.</p></div><div class="hero-mark">INBOX</div></div></section>
-  <section class="page" id="settings"><div class="hero" style="min-height:117px"><div><span class="badgeb">BRAND CONTROL</span><h2>تنظیمات برند و انتشار</h2><p>نام برند، لینک وب‌سایت، شناسه تلگرام و واترمارک.</p></div><div class="hero-mark">SETUP</div></div>
+  <section class="page" id="settings"><div class="assistant-page-heading assistant-settings-heading"><div><span class="assistant-section-label">PREFERENCES</span><h2>تنظیمات دستیار</h2><p>هویت برند و رفتار انتشار را یک‌بار تنظیم کنید.</p></div><span class="assistant-settings-icon">⚙</span></div><div class="hero-mark">SETUP</div></div>
   <div class="settingsgrid">
    <div class="panel setting-card"><div class="eyebrow">IDENTITY</div><h3 class="sectiontitle">هویت برند DR FX AI</h3><label class="field"><span>نام نمایشی برند</span><input id="brandName" maxlength="48" value="DR FX AI" /></label><label class="field"><span>وب‌سایت رسمی</span><input id="website" dir="ltr" value="https://drfx.company" /></label><label class="field"><span>آیدی کانال (در صورت وجود)</span><input id="handle" dir="ltr" placeholder="@YourChannel" /></label><button class="btn primary" id="saveSettings">✓ ذخیره تنظیمات</button></div>
    <div class="panel setting-card"><div class="eyebrow">MEDIA STUDIO</div><h3 class="sectiontitle">کنترل تصاویر و امنیت</h3><div class="switchrow"><div><strong>افزودن واترمارک روی عکس</strong><div class="smallhelp">لوگو و سایت روی تصویر جدید درج می‌شود.</div></div><button class="switch on" id="watermarkToggle" aria-label="Toggle watermark" aria-pressed="true"></button></div><div class="switchrow"><div><strong>بازسازی تصویر سیگنال</strong><div class="smallhelp">به جای عکس دارای برند قبلی، کارت تازه از اعداد تأییدشده می‌سازد.</div></div><button class="switch" id="cardModeToggle" aria-label="Toggle signal card mode" aria-pressed="false"></button></div><div class="switchrow"><div><strong>⚡ انتشار سریع فورواردها</strong><div class="smallhelp">متن واضح و معتبر خودکار منتشر می‌شود؛ پیام‌های مبهم و عکس‌ها برای تأیید یک‌لمسی باقی می‌مانند.</div></div><button class="switch on" id="autoPublishToggle" type="button" aria-label="انتشار سریع" aria-pressed="true"></button></div><div class="switchrow"><div><strong>🛑 توقف اضطراری انتشار</strong></div><button class="switch" id="emergencyStopToggle" type="button" aria-label="توقف اضطراری"></button></div><div class="switchrow"><div><strong>♻️ جلوگیری از پیام تکراری</strong></div><button class="switch on" id="duplicateGuardToggle"></button></div><div class="switchrow"><div><strong>✓ اعتبارسنجی سیگنال</strong><div class="smallhelp">در حالت خاموش، انتشار خودکار غیرفعال می‌شود؛ بررسی دستی برقرار می‌ماند.</div></div><button class="switch on" id="strictValidationToggle"></button></div><div class="pro-advanced">
@@ -170,8 +201,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
   <div class="tipline" id="tipline"><div><strong>✦ چگونه شروع کنم؟</strong><p>سیگنال را فوروارد کنید؛ سیگنال متنی معتبر مستقیم منتشر می‌شود و برای موارد مبهم دکمه انتشار با یک لمس در تلگرام دارید.</p></div><span class="tipcode">FORWARD → AUTO / 1 TAP</span></div>
  </main>
 </div>
-<nav class="bottomnav"><button class="active" data-page="fast"><span>⚡</span>Fast</button><button data-page="pro"><span>✦</span>Pro</button><button data-page="dashboard"><span>▦</span>داشبورد</button><button data-page="settings"><span>⚙</span>تنظیمات</button></nav>
+<nav class="bottomnav" aria-label="ناوبری اصلی"><button class="active" data-page="home"><span>⌂</span>خانه</button><button data-page="inbox"><span>▣</span>صندوق <b id="mobilePending" class="assistant-nav-count" hidden>0</b></button><button data-page="settings"><span>⚙</span>تنظیمات</button></nav>
 <div class="toast" id="toast"></div>
 <div class="modalwrap" id="confirmModal" aria-hidden="true"><div class="modal"><div class="eyebrow">FINAL APPROVAL</div><h3>تأیید انتشار سیگنال</h3><p id="confirmText">آیا محتوای سیگنال بررسی شده و برای انتشار آماده است؟</p><div class="actionbar"><button class="btn" id="cancelPublish">انصراف</button><button class="btn primary" id="confirmPublish">↗ انتشار در کانال</button></div></div></div>
-<script type="module" src="./app.js?v=1.0.0"></script>
+<script type="module" src="./app.js?v=0.4.0"></script>
 </body></html>
