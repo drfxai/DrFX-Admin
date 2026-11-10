@@ -520,7 +520,7 @@ async function handleWebhook(req,env,ctx){
  }
  if(String(m.text||'').match(/^\/(?:start|help)(?:@\w+)?/i)){
   console.log('DrFX authorized /start received');
-  try{await tg(env,'sendMessage',{chat_id:m.chat.id,text:'✦ DR FX AI  |  DrFX Admin\n\nسیگنال متنی یا تصویری را به این ربات فوروارد کنید. سپس در Mini App آن را بررسی و منتشر کنید.\n\n🔒 انتشار فقط پس از تأیید شما انجام می‌شود.',reply_markup:{inline_keyboard:[[{text:'⚡ Open Admin Panel',web_app:{url:new URL(req.url).origin}}]]}});console.log('DrFX /start response accepted by Telegram');}catch(e){console.error('Telegram start reply failed',String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,240));}
+  try{await tg(env,'sendMessage',{chat_id:m.chat.id,text:'✦ DR FX AI  |  DrFX Admin\n\nسیگنال متنی یا تصویری را فوروارد کنید. برای نمایش کارت جدید /review را بفرستید و برای ادیت تصاویر Mini App را باز کنید.\n\n🔒 انتشار فقط پس از تأیید شما انجام می‌شود.',reply_markup:{inline_keyboard:[[{text:'⚡ Open Admin Panel',web_app:{url:new URL(req.url).origin}}]]}});console.log('DrFX /start response accepted by Telegram');}catch(e){console.error('Telegram start reply failed',String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,240));}
   return j({ok:true});
  }
  const command=String(m.text||'').trim().toLowerCase();
@@ -779,10 +779,15 @@ const drfxApp = {
   try{const old=await env.DB.prepare("SELECT inbox.* FROM inbox LEFT JOIN image_edits ON image_edits.inbox_id=inbox.id WHERE inbox.file_id IS NOT NULL AND inbox.status='review' AND image_edits.inbox_id IS NULL ORDER BY inbox.id DESC LIMIT 1").first();if(old)await scanImage(env,old);}catch(e){console.warn('Image scan cron failed: '+String(e?.message||e).slice(0,120));}
   if(!env.BOT_TOKEN||!env.WEBHOOK_SECRET||!env.ADMIN_TELEGRAM_USER_ID||!env.DESTINATION_CHAT_ID)return;
   const origin=String(env.PUBLIC_URL||'https://drfx-admin.drfxai.workers.dev').replace(/\/$/,'');
-  const material=new TextEncoder().encode([env.BOT_TOKEN,env.WEBHOOK_SECRET,origin,'drfx-v0.4-native-widgets'].join('\n'));
+  const material=new TextEncoder().encode([env.BOT_TOKEN,env.WEBHOOK_SECRET,origin,'drfx-v0.5-native-widgets'].join('\n'));
   const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',material))].map(x=>x.toString(16).padStart(2,'0')).join('');
   const prior=await env.DB.prepare("SELECT value FROM settings WHERE key='telegram_setup_sha256'").first();
-  if(prior?.value===hash)return;
+  if(prior?.value===hash){
+    try{
+     const info=await tg(env,'getWebhookInfo',{});
+     if(info?.url===origin+'/telegram'&&Array.isArray(info.allowed_updates)&&info.allowed_updates.includes('widget_query'))return;
+    }catch(e){console.warn('DrFX webhook check failed: '+String(e?.message||e).slice(0,120));}
+   }
   try{
    const bot=await tg(env,'getMe',{});
    if(String(bot?.username||'').toLowerCase()!=='drfxa_bot')throw Error('BOT_TOKEN mismatch: expected @Drfxa_bot, got a different bot username');
@@ -790,7 +795,7 @@ const drfxApp = {
    console.log('DrFX webhook installed for @Drfxa_bot');
    await env.DB.prepare("INSERT INTO settings(key,value) VALUES('telegram_setup_sha256',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(hash).run();
    console.log('DrFX Telegram webhook setup complete');
-   try{await tg(env,'setMyCommands',{commands:[{command:'start',description:'شروع و راهنمای ربات'},{command:'help',description:'راهنمای دریافت و انتشار سیگنال'},{command:'review',description:'Review latest pending signal in a Telegram widget'}]});}catch(e){console.warn('DrFX optional commands setup failed: '+String(e?.message||e).slice(0,160));}
+   try{await tg(env,'setMyCommands',{commands:[{command:'start',description:'شروع و راهنمای ربات'},{command:'help',description:'راهنمای دریافت و انتشار سیگنال'},{command:'review',description:'Review the latest draft in a native widget'},{command:'widgets',description:'Open the latest review widget'}]});}catch(e){console.warn('DrFX optional commands setup failed: '+String(e?.message||e).slice(0,160));}
    try{await tg(env,'setMenuButton',{menu_button:{type:'web_app',text:'DrFX Admin',web_app:{url:origin}}});}catch(e){console.warn('DrFX optional Mini App menu setup failed: '+String(e?.message||e).slice(0,160));}
   }catch(e){console.warn('DrFX Telegram setup failed: '+String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,240));}
  },

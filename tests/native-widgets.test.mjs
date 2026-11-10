@@ -78,3 +78,11 @@ test('native callbacks accept only data queries and widgets use intrinsic height
   assert.match(send,/chat_data:drfxReviewChatData/);
  }
 });
+
+test('production widget commands are registered and webhook is self healing',()=>{
+ assert.match(source,/command:'review'/);
+ assert.match(source,/command:'widgets'/);
+ assert.match(source,/getWebhookInfo/);
+ assert.match(source,/info\.allowed_updates\.includes\('widget_query'\)/);
+ assert.match(source,/drfx-v0\.5-native-widgets/);
+});
