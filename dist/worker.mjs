@@ -536,7 +536,7 @@ async function drfxWidgetQuery(q,env,ctx){
  if(!q?.id)return j({ok:true,ignored:true});
  const ok=q.chat?.type==='private'&&String(q.from?.id)===String(env.ADMIN_TELEGRAM_USER_ID)&&String(q.chat?.id)===String(q.from?.id)&&Number.isSafeInteger(Number(q.message_id))&&!q.inline_message_id;
  const m=/^drfx:(status|publish|reject):([1-9]\d{0,10})$/.exec(String(q.data||''));
- if(!ok||!m){await drfxWidgetAnswer(env,q.id,{message:'Not authorized'});return j({ok:true,denied:true});}
+ if(!ok||q.type?.type!=='data'||!m){await drfxWidgetAnswer(env,q.id,{message:'Not authorized'});return j({ok:true,denied:true});}
  const row=await getItem(env,m[2]);
  if(!row||String(row.admin_id)!==String(q.from.id)||String(row.origin_chat_id)!==String(q.chat.id)){
   await drfxWidgetAnswer(env,q.id,{message:'Message unavailable'});return j({ok:true,denied:true});
@@ -623,7 +623,7 @@ async function handleWebhook(req,env,ctx){
  if(/^\/(?:review|widgets)(?:@\w+)?$/.test(command)){
   const row=await env.DB.prepare("SELECT * FROM inbox WHERE admin_id=? AND status='review' ORDER BY id DESC LIMIT 1").bind(String(m.from.id)).first();
   if(!row){await tg(env,'sendMessage',{chat_id:m.chat.id,text:'✅ No pending review items.'});return j({ok:true,empty:true});}
-  await tg(env,'sendWidget',{chat_id:m.chat.id,html:drfxReviewWidgetHtml(),chat_data:drfxReviewChatData(row,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),allow_queries:true,height:320,caption:'DrFX Admin · Review #'+row.id+' (private admin chat only)'});
+  await tg(env,'sendWidget',{chat_id:m.chat.id,html:drfxReviewWidgetHtml(),chat_data:drfxReviewChatData(row,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),allow_queries:true,caption:'DrFX Admin · Review #'+row.id+' (private admin chat only)'});
   return j({ok:true,widget_sent:true});
  }
 
@@ -677,7 +677,7 @@ async function handleWebhook(req,env,ctx){
      await tg(env,'sendWidget',{
       chat_id:m.chat.id,html:drfxReviewWidgetHtml(),
       chat_data:drfxReviewChatData(current,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),
-      caption:msg+' Open Mini App for advanced editing.',height:320,allow_queries:true,protect_content:true
+      caption:msg+' Open Mini App for advanced editing.',allow_queries:true,protect_content:true
      });
      widgetSent=true;
     }catch(e){console.warn('Widget unavailable; using legacy reply: '+String(e?.message||e).slice(0,100));}
