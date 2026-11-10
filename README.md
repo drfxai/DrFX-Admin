@@ -114,3 +114,11 @@ The Home card now displays the actual original photo through the authenticated /
 The Telegram bot accepts photos and JPEG/PNG/WebP image documents up to 8 MB, verifies file magic bytes, and responds with the detected MIME type. Images are still retrieved from Telegram; no new object storage or D1 schema is required.
 
 Balanced and Deep scans both attempt OCR. OCR results and candidate signal levels are saved for admin review. OCR is not guaranteed to read every small or distorted character, and photo publication still requires explicit approval. Deep scan adds extra identifier-region searches. Workers AI quota and billing may apply.
+
+## v0.8 — Autonomous Channel Assistant
+
+The Home page and Fast Inbox offer **Quick Publish**, **Edit**, and **Delete**. The private Telegram widget and fallback keyboard expose the same actions. Edit opens the selected message in Pro using authenticated Telegram Mini App data. Delete removes messages from the bot Inbox only.
+
+With Auto Publish enabled, validated text messages are posted without manual review. Photo trading signals use cross-checked OCR and a fresh DrFX branded card, never a copy of the source image. Image announcements can auto-post when captions and OCR agree and there is no suspicious identity or logo. Uncertain content stays pending; send attempts are not retried automatically.
+
+Widget publication verifies the authorized Telegram administrator and private chat ownership, and continues to enforce duplicate checks, D1 locking, identity safeguards, and Emergency Stop. No D1 migration or secret changes are required.
