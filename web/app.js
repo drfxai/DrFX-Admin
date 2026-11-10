@@ -1,6 +1,10 @@
 import {createFastMode} from './fast-pro.js';
 const telegram=window.Telegram?.WebApp;
-const demo=new URLSearchParams(location.search).get('demo')==='1'||location.protocol==='file:'||window.__DRFX_DEMO__===true;
+const navQuery=new URLSearchParams(location.search);
+const demo=navQuery.get('demo')==='1'||location.protocol==='file:'||window.__DRFX_DEMO__===true;
+const fromWidget=String(telegram?.initDataUnsafe?.start_param||navQuery.get('tgWebAppStartParam')||'');
+const widgetItemId=/^edit_([1-9]\d{0,10})$/.exec(fromWidget)?.[1]||(/^[1-9]\d{0,10}$/.test(navQuery.get('item')||'')?navQuery.get('item'):null);
+let widgetItemOpened=false;
 if(demo)document.body.classList.add('demo');
 if(telegram){try{telegram.ready();telegram.expand();telegram.setHeaderColor('#070c17');telegram.setBackgroundColor('#070c17');}catch{}}
 const el=id=>document.getElementById(id);
@@ -15,7 +19,7 @@ let busy=false,toastTimer,inboxMode='fast',proPanel='content',proQueueOpen=false
 const fastMode=createFastMode({
  el,state,selected,esc,toast,isBusy:()=>busy,refresh:()=>load(),
  goPro:(id,panel)=>{if(hasUnsavedDraft()){toast('ابتدا تغییرات متن را ذخیره کنید.');return;}state.selected=id;setEdit(false);proQueueOpen=false;page('pro');setProPanel(panel||((state.items.find(x=>x.id===id)?.has_photo)?'media':'content'),{force:true});render();},
- publish:async(id)=>{state.selected=id;setEdit(false);await mutation('publish');}
+ publish:async(id)=>{await quickPublish(id);}
 });
 function toast(text){const e=el('toast');e.textContent=text;e.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('show'),3300);}
 function esc(text){return String(text??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
@@ -312,7 +316,7 @@ function renderIdentityAudit(){
 }
 function homeItem(){return state.items.find(x=>x.status==='review')||state.items.find(x=>x.status==='failed')||state.items[0]||null;}
 function homeCanPublish(x){return !!x&&x.status==='review'&&!state.settings.emergencyStop&&!busy
- &&(x.has_photo?imageData.get(x.id)?.scan_status==='approved':!!String(x.draft_text||'').trim());}
+ &&Boolean(x.has_photo||x.signal||String(x.draft_text||'').trim());}
 function setConnection(status){
  const target=el('connectionText');if(!target)return;
  target.textContent=({ready:'پنل متصل',demo:'پیش‌نمایش',locked:'ورود از تلگرام',error:'اتصال ناموفق',loading:'در حال اتصال'})[status]||status;
@@ -445,11 +449,11 @@ function renderHome(){
  const can=homeCanPublish(x),publish=el('homePublish');
  publish.disabled=!x||busy||x.status==='sending'||(can&&state.settings.emergencyStop);
  publish.dataset.action=can?'publish':x?.status==='failed'?'recover':x?.status==='sent'?'result':x?.has_photo?'media':'review';
- publish.textContent=!x?'⚡ انتشار سریع':can?'⚡ انتشار سریع':x?.status==='failed'?'↻ بررسی ارسال':x?.status==='sent'?'◉ مشاهده نتیجه':x?.has_photo?'◉ تأیید تصویر':'◉ بررسی محتوا';
+ publish.textContent=!x?'⚡ انتشار سریع':can?'⚡ انتشار سریع':x?.status==='failed'?'↻ بررسی ارسال':x?.status==='sent'?'◉ مشاهده نتیجه':'◉ بررسی محتوا';
  el('homeEdit').disabled=!x||busy;
  el('homeDelete').disabled=!x||busy||x.status==='sending';
  el('homeGuardTitle').textContent=state.settings.emergencyStop?'انتشار اضطراری متوقف است': 'کنترل محتوا فعال است';
- el('homeGuardDetails').textContent= x?.has_photo?'OCR و پاکسازی تصویری تنها پس از تأیید شما قابل انتشارند.':'کنترل شناسه‌های خارجی و جلوگیری از انتشار تکراری فعال است.';
+ el('homeGuardDetails').textContent=x?.has_photo?'تصویر معتبر با OCR و بازسازی هوشمند خودکار منتشر می‌شود.':'محتوای معتبر خودکار منتشر می‌شود؛ موارد نامطمئن در صف باقی می‌مانند.';
 }
 
 function hasUnsavedDraft(){
@@ -519,7 +523,12 @@ function page(input){
 async function api(path,{method='GET',body}={}){const res=await fetch(path,{method,headers:{'X-Telegram-Init-Data':telegram?.initData||'',...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});const data=await res.json().catch(()=>({error:'Invalid response'}));if(!res.ok)throw Error(data.error||'Connection failed');return data;}
 async function load(){if(demo){state.items=structuredClone(samples);state.selected=state.items[0].id;setConnection('demo');render();return;}
  if(!telegram?.initData){setConnection('locked');el('itemList').innerHTML='<div class="noitems">🔒<br>برای ورود امن، این پنل را از منوی ربات تلگرام باز کنید.<br><small>برای پیش‌نمایش ظاهری می‌توانید پارامتر ?demo=1 را به آدرس اضافه کنید.</small></div>';el('draftView').textContent='Access requires verified Telegram Mini App session.';return;}
- try{const data=await api('/api/bootstrap');const prior=state.items.find(v=>v.id===state.selected);state.items=data.items||[];state.settings=data.settings||state.settings;const current=state.items.find(v=>v.id===state.selected);if(prior&&prior.status!=='sent'&&current?.status==='sent'){state.filter='sent';document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter==='sent'));toast('✅ پیام منتشر شد.');}state.selected=state.selected&&state.items.some(x=>x.id===state.selected)?state.selected:state.items[0]?.id;setConnection('ready');syncSettings();render();}catch(e){setConnection('error');toast('خطا: '+e.message);}}
+ try{const data=await api('/api/bootstrap');const prior=state.items.find(v=>v.id===state.selected);state.items=data.items||[];state.settings=data.settings||state.settings;const current=state.items.find(v=>v.id===state.selected);if(prior&&prior.status!=='sent'&&current?.status==='sent'){state.filter='sent';document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter==='sent'));toast('✅ پیام منتشر شد.');}state.selected=state.selected&&state.items.some(x=>x.id===state.selected)?state.selected:state.items[0]?.id;
+ if(widgetItemId&&!widgetItemOpened){
+  const target=state.items.find(x=>String(x.id)===widgetItemId);
+  if(target){widgetItemOpened=true;state.selected=target.id;page('pro');setEdit(true);setProPanel(target.has_photo?'media':'content',{force:true});}
+ }
+ setConnection('ready');syncSettings();render();}catch(e){setConnection('error');toast('خطا: '+e.message);}}
 
 function smartSettings(overrides={}){
  return {brandName:el('brandName').value.trim(),website:el('website').value.trim(),handle:el('handle').value.trim(),watermark:state.settings.watermark,photoMode:state.settings.photoMode,autoPublish:state.settings.autoPublish,emergencyStop:state.settings.emergencyStop===true,duplicateGuard:state.settings.duplicateGuard!==false,strictValidation:state.settings.strictValidation!==false,identityGuard:state.settings.identityGuard!==false,scanDepth:el('scanDepth').value,...overrides};
@@ -626,27 +635,29 @@ el('homeDelete').addEventListener('click',async()=>{
  finally{setBusy(false);render();}
 });
 el('homeAutoPublish').addEventListener('click',()=>{if(!busy)el('autoPublishToggle').click();});
-el('homePublish').addEventListener('click',async()=>{
- if(busy)return;
- const x=homeItem();if(!x)return;
- if(!homeCanPublish(x)){
-  showHomeItem(false,(x.status==='sent'||x.status==='failed')?'publish':x.has_photo?'media':'content');
-  return;
- }
- // Fast lane uses the same guarded publishing transaction and server-side
- // image cleanup as Pro; never send a raw unapproved photo.
+async function quickPublish(id){
+ const item=state.items.find(t=>t.id===id);if(!item||item.status!=='review'||busy)return;
  setBusy(true);
  try{
-  if(demo){const item=state.items.find(t=>t.id===x.id);item.status='sent';toast('فقط پیش‌نمایش: انتشار واقعی انجام نشد.');}
+  if(demo){item.status='sent';toast('فقط پیش‌نمایش: انتشار واقعی انجام نشد.');}
   else{
-   const result=await api('/api/items/'+x.id+'/quick-publish',{method:'POST',body:{}});
-   if(!result.ok)throw Error(result.error||'Fast publish failed');
-   const i=state.items.findIndex(t=>t.id===x.id);if(i>=0)state.items[i]=result.item;
-   toast('✅ انتشار سریع انجام شد؛ شناسه پیام '+result.message_id);
+   const result=await api('/api/items/'+id+'/quick-publish',{method:'POST',body:{}});
+   if(!result.ok)throw Error(result.error||'Publication failed');
+   const idx=state.items.findIndex(t=>t.id===id);
+   if(idx>=0)state.items[idx]=result.item;
+   toast('✅ انتشار انجام شد. شماره: '+result.message_id);
    await load();
   }
- }catch(e){toast('⚠️ '+String(e.message||e));if(!demo)await load().catch(()=>{});}
- finally{setBusy(false);render();}
+ }catch(error){
+  toast('⚠️ '+String(error.message||error));
+  if(!demo)await load().catch(()=>{});
+ }finally{setBusy(false);render();}
+}
+el('homePublish').addEventListener('click',async()=>{
+ if(busy)return;
+ const item=homeItem();if(!item)return;
+ if(!homeCanPublish(item)){showHomeItem(false,item.has_photo?'media':'content');return;}
+ await quickPublish(item.id);
 });
 el('proToggleQueue').addEventListener('click',()=>{
  if(hasUnsavedDraft()){toast('ابتدا تغییرات متن را ذخیره کنید.');return;}
