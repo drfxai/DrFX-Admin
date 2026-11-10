@@ -32,7 +32,7 @@ test('widget callback requires Telegram-authenticated admin and message ownershi
  assert.match(source,/ADMIN_TELEGRAM_USER_ID/);
  assert.match(source,/String\(row\.admin_id\)!==String\(q\.from\.id\)/);
  assert.match(source,/String\(row\.origin_chat_id\)!==String\(q\.chat\.id\)/);
- assert.match(source,/DRFX_WIDGET_PUBLISH_ENABLED!=='true'/);
+ assert.match(source,/Owner explicitly opted into guarded one-tap widget publishing/);
  assert.match(source,/status='rejected'.+status='review'/);
 });
 
@@ -59,8 +59,8 @@ test('Persian, emoji and escaped content always remain below Telegram chat_data 
  assert.match(drfxReviewWidgetHtml(),/s\.publishEnabled!==true/);
 });
 
-test('automatic widgets are off by default and retain legacy fallback',()=>{
- assert.match(source,/DRFX_WIDGET_AUTOSEND_ENABLED==='true'/);
+test('automatic widgets are active for the authorized administrator and retain fallback',()=>{
+ assert.doesNotMatch(source,/DRFX_WIDGET_AUTOSEND_ENABLED==='true'/);
  assert.match(source,/!attempted&&current\?\.status==='review'/);
  assert.match(source,/widgetSent=true/);
  assert.match(source,/if\(!widgetSent\)/);
@@ -73,7 +73,7 @@ test('widget callback accepts data queries with optional type and sends safe Min
  assert.match(source,/await tg\(env,'sendWidget',payload\)/);
  assert.match(source,/allow_queries:true,protect_content:true/);
  assert.match(source,/chat_data:drfxReviewChatData\(item/);
- assert.match(source,/web_app:\{url:appUrl\}/);
+ assert.match(source,/drfxThreeActions\(item,appUrl\)/);
  assert.match(source,/Manual widget unavailable; using admin Mini App fallback/);
  assert.match(source,/setChatMenuButton/);
  assert.doesNotMatch(source,/setMenuButton/);
@@ -122,7 +122,7 @@ test('widget fast publication is enabled only for owner-reviewed content',()=>{
  assert.equal(approved.quickReady,true);
  assert.match(source,/scan_status!=='approved'/);
  assert.match(source,/new Uint8Array\(await brandPhoto/);
- assert.match(source,/await publishRow\(env,row,currentSettings,false,cleaned\)/);
+ assert.match(source,/await publishRow\(env,fresh,currentSettings,false,prepared\.photo\)/);
  assert.match(source,/quick-publish'&&method==='POST'/);
  assert.match(source,/^.*drfxAutoPhotoWorkflow.*$/m);
  assert.match(source,/const deleted=await env.DB.prepare/);

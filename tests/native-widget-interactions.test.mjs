@@ -62,7 +62,7 @@ test('Edit opens private Admin Mini App for either text or image',()=>{
   const w=boot(data,{},html);
   w.get('edit').onclick();
   assert.equal(w.links.length,1);
-  assert.match(w.links[0],/https:\/\/t\.me\/drfxa_bot\?startapp=review/);
+  assert.match(w.links[0],/https:\/\/t\.me\/drfxa_bot\?startapp=edit_17/);
  }
 });
 test('approved photo offers immediate publication; unapproved photo redirects to editor',async()=>{

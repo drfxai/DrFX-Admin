@@ -38,9 +38,9 @@ test('autonomous photo pipeline is task-scoped, fails closed, and never retries 
  assert.match(code,/const job=drfxAutoPhotoWorkflow\(env,item,m,s/);
  assert.match(code,/if\(ctx\?\.waitUntil\)ctx\.waitUntil\(job\)/);
  assert.match(code,/if\(current\?\.status!=='review'\)return/);
- assert.match(code,/await scanImage\(env,item\)/);
- assert.match(code,/autoPhotoSignalReady\(item,fresh,scan\)/);
- assert.match(code,/await publishRow\(env,current,s,false,cleaned\)/);
+ assert.match(code,/cfg=await scanImage\(env,item\)/);
+ assert.match(code,/autoImageCandidate\(item,fresh\.ocr_text,secondOcr\)/);
+ assert.match(code,/await publishRow\(env,fresh,s,false,ready\.photo\)/);
  assert.match(code,/if\(!current\|\|current\.status!=='review'\)return/);
  assert.match(code,/status:'approved'/);
  assert.match(code,/scan:partial/);
