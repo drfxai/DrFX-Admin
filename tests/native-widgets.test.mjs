@@ -42,3 +42,19 @@ test('existing webhook stays intact and subscribes to widget_query',()=>{
  assert.match(source,/allowed_updates:\['message','callback_query','widget_query'\]/);
  assert.match(source,/\/\(\?:review\|widgets\)/);
 });
+
+test('Persian, emoji and escaped content always remain below Telegram chat_data limit',()=>{
+ const long='طلای جهانی 🚀💎\\n'.repeat(100);
+ for(const item of [
+  {id:7,status:'review',draft_text:long,file_id:null},
+  {id:7,status:'review',draft_text:'\"\\\\'.repeat(600),file_id:null},
+  {id:7,status:'review',draft_text:'💎'.repeat(500),file_id:null}
+ ]){
+  const data=drfxReviewChatData(item);
+  assert.ok(Buffer.byteLength(data,'utf8')<=1024);
+  assert.equal(JSON.parse(data).publishEnabled,false);
+  assert.equal(JSON.parse(drfxReviewChatData(item,true)).publishEnabled,true);
+  assert.ok(Buffer.byteLength(drfxReviewChatData(item,true),'utf8')<=1024);
+ }
+ assert.match(drfxReviewWidgetHtml(),/s\.publishEnabled===true/);
+});
