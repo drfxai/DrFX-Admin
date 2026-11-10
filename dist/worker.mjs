@@ -279,7 +279,7 @@ async function scanImage(env,item){
   const targets=[
    ['identity','visible social @handles, Telegram usernames, website URLs, and watermark text']
   ];
-  if(scanSettings.scanDepth==='deep')targets.push(
+  if(scanSettings.scanDepth==='deep'||scanSettings.autoPublish===true)targets.push(
    ['logo','brand logos, QR codes and external channel watermarks'],
    ['contact','email addresses, telephone numbers or small social media handles']
   );
@@ -407,7 +407,7 @@ export function eligibleForAutoContent(m,parsed,photo){
  const created=Number(m.forward_origin?.date||m.date||0);
  if(!created||Math.abs(Date.now()/1000-created)>(m.forward_origin?90*60:10*60))return false;
  if(/\b(BUY|SELL|ENTRY|STOPLOSS|STOP LOSS|SL|TP[1-5]|TAKE PROFIT|LIMIT|ORDER)\b|ورود|حد ضرر|هدف قیمت/i.test(text))return false;
- if(!/\b(NEWS|MARKET|UPDATE|BREAKING|ANALYSIS|REPORT|OUTLOOK|DAILY|NOTICE|ANNOUNCEMENT)\b|خبر|تحلیل|بازار|اطلاعیه|گزارش|به‌روزرسانی/i.test(text))return false;
+ if(!m.forward_origin&&!/\b(NEWS|MARKET|UPDATE|BREAKING|ANALYSIS|REPORT|OUTLOOK|DAILY|NOTICE|ANNOUNCEMENT)\b|خبر|تحلیل|بازار|اطلاعیه|گزارش|به‌روزرسانی/i.test(text))return false;
  // Do not auto relay unknown advertisements, contact details, or channel promotions.
  return !/https?:\/\/|www\.|t\.me\/|@[A-Za-z_][A-Za-z0-9_]{4,}|(?:\b\w+[.-]?\w+@\w+\.\w+\b)/i.test(text);
 }
