@@ -66,3 +66,14 @@ test('original image preview stays separate from edited JPEG publishing',()=>{
  assert.match(worker,/action==='publish-image'/);
  assert.match(worker,/action==='image'&&row\.file_id/);
 });
+
+
+test('Visual editor retries a failed image load without keeping an empty selection cache',()=>{
+ assert.match(ui,/const visualState=\{itemId:null,url:null,drawing:null,loading:false\}/);
+ assert.match(ui,/visualState\.itemId===item\.id&&\(visualState\.url\|\|visualState\.loading\|\|demo\)/);
+ assert.match(ui,/visualState\.loading=true/);
+ assert.match(ui,/visualState\.loading=false/);
+ assert.match(ui,/visualState\.itemId=null;/);
+ assert.match(ui,/visualState\.url=null;/);
+ assert.match(ui,/دوباره تلاش کنید/);
+});
