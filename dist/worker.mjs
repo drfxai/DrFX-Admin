@@ -459,69 +459,22 @@ async function pruneInbox(env){
  * provided through chat_data, never injected into executable HTML.
  */
 export function drfxReviewWidgetHtml(){
- return `<!doctype html><html><style>
-body{margin:0;padding:13px;font:14px system-ui,sans-serif;color:var(--tg-theme-text-color)}
-.card{border:1px solid var(--tg-theme-section-separator-color);border-radius:15px;padding:12px}
-.head{display:flex;justify-content:space-between;align-items:center;gap:8px}
-h3{font-size:1.05em;margin:0}.hint{color:var(--tg-theme-hint-color);font-size:.84em}
-.tag{color:var(--tg-theme-accent-text-color);font-weight:700}
-.content{white-space:pre-wrap;overflow-wrap:anywhere;max-height:100px;overflow:hidden;margin:12px 0;padding:10px;border-radius:9px;background:var(--tg-theme-secondary-bg-color)}
-.row{display:flex;gap:8px;margin-top:9px}button{flex:1;padding:10px 5px;border:0;border-radius:9px;font-weight:700;background:var(--tg-theme-button-color);color:var(--tg-theme-button-text-color)}
-button.alt{background:var(--tg-theme-secondary-bg-color);color:var(--tg-theme-text-color)}
-button.danger{background:var(--tg-theme-destructive-text-color);color:#fff}
-button:disabled{background:var(--tg-theme-secondary-bg-color);color:var(--tg-theme-hint-color)}
-#notice{min-height:17px;margin-top:9px}small{font-size:.8em}
-</style><body><div class="card">
-<div class="head"><h3>✦ DrFX Admin</h3><span class="tag" id="state">Review</span></div>
-<div class="hint" id="ref">Admin-only review</div>
-<div class="content" id="content">Waiting for message data...</div>
-<div class="row"><button id="approve">Approve & Publish</button><button id="reject" class="danger">Reject</button></div>
-<div class="row"><button id="refresh" class="alt">Refresh status</button></div>
-<div class="hint" id="notice">Widget publishing requires release approval; review images in Mini App.</div>
-</div><script>
-(function(){
-var T=window.TelegramWidget,d=document,s={};
-try{s=JSON.parse(T&&T.chatData||'{}')}catch(e){}
-function e(id){return d.getElementById(id)}
-function draw(){
-e('ref').textContent='#'+(s.id||'?')+' · '+(s.kind==='image'?'Photo (Mini App required)':'Text signal');
-e('content').textContent=s.text||'No preview';
-e('state').textContent=s.status||'review';
-var can=s.status==='review'&&s.kind!=='image'&&s.publishEnabled===true&&!!T;
-e('approve').disabled=!can;e('reject').disabled=s.status!=='review'||!T;
-
-}
-function act(name){
-if(!T||!s.id)return;
-e('notice').textContent='Sending request...';
-T.request('drfx:'+name+':'+s.id).then(function(r){
-var a={};try{a=JSON.parse(r.result||'{}')}catch(e){}
-if(a.status)s.status=a.status;
-e('notice').textContent=a.message||'Request received';draw();
-},function(err){e('notice').textContent='Request failed: '+(err.code||'FAILED')});
-}
-e('approve').onclick=function(){act('publish')};
-e('reject').onclick=function(){act('reject')};
-e('refresh').onclick=function(){act('status')};
-if(T)T.onEvent('chatDataChanged',function(){try{s=JSON.parse(T.chatData||'{}');draw()}catch(e){}});
-draw();
-})();
-</script></body></html>`;
+ return "<!doctype html><html><style>\n*{box-sizing:border-box}body{margin:0;padding:0;font:13px system-ui,sans-serif;color:#eaf5ff;background:#061522}\n.shell{padding:13px;border-radius:18px;border:1px solid #1a7386;background:radial-gradient(ellipse at 95% 0%,#073e51,transparent 49%),linear-gradient(145deg,#071c2e,#06101d 72%);box-shadow:inset 0 0 0 1px #16435b,0 0 16px #083e53;overflow:hidden}\n.top,.line,.buttons,.hero,.flow,.levels,.foot{display:flex;align-items:center;justify-content:space-between;gap:8px}\n.logo{font-size:20px;font-weight:900;letter-spacing:-.7px}.logo i{font-style:normal;color:#35e5cd}.sub{font-size:9px;color:#9bb6c8;letter-spacing:1.7px}.mark{font-weight:800;font-size:9px;border:1px solid #4eddb6;color:#63edd2;border-radius:15px;padding:5px 9px;background:#063b3a}\n.flow{margin:11px 0;padding:8px 11px;border:1px solid #214659;border-radius:11px;background:#10283d;font-size:10px;color:#9fbad2}.flow b{color:#6cf3dd}.flow span{color:#34bfce}\n.box{border:1px solid #28566b;border-radius:14px;padding:11px;background:linear-gradient(120deg,#0c2639,#081725)}\n.line{font-size:11px;color:#b3cede}.count{color:#5ae7ee;font-weight:800}.pending{color:#ffe1a0;border:1px solid #ab8147;background:#3d2c15;border-radius:13px;padding:4px 8px;font-size:10px}\n.hero{margin:11px 0 8px}.asset{font-size:22px;font-weight:900;letter-spacing:.5px}.side{border:1px solid #25d7ad;background:#053a33;color:#75ffe2;border-radius:8px;padding:5px 11px;font-size:14px;font-weight:900}.side.sell{color:#ffacb6;border-color:#d15b6c;background:#3d1725}\n.snapshot{font:11px/1.45 system-ui,sans-serif;color:#b7d1e0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:46px;overflow:hidden;margin:7px 0;padding:8px;border-radius:8px;background:#10283a}\n.levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:8px}\n.level{border:1px solid #214457;background:#10283a;border-radius:8px;padding:7px 8px}.level small{display:block;color:#86a9bc;font-size:9px}.level b{display:block;color:#e7f4ff;font-size:12px;font-variant-numeric:tabular-nums}.level.loss b{color:#ff879b}.level.profit b{color:#63ecd1}\n.stats{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}.chip{font-size:9px;border:1px solid #236a68;color:#7fead7;border-radius:13px;padding:4px 8px;background:#0a3134}.chip.neutral{color:#a7c4db;border-color:#36516e}\n.buttons{margin-top:11px}button{font:700 11px system-ui,sans-serif;border-radius:10px;padding:11px 4px;border:1px solid #306579;background:#132f45;color:#d9f4ff;flex:1;min-width:0}\nbutton.main{background:linear-gradient(115deg,#0e806c,#0b5989);border-color:#45d9d0;color:#fff;box-shadow:0 0 12px #075e65}\nbutton.danger{background:#311d2e;border-color:#9e4c68;color:#ffbdc4}button:disabled{opacity:.43}\n.foot{font-size:9px;margin-top:10px;color:#88a5bd}.status{color:#cbe4f4;min-height:13px;margin-top:7px;font-size:10px}\n@media(prefers-color-scheme:light){body{background:#eaf4f6}.shell{background:linear-gradient(140deg,#0b293f,#092037)}}\n@media(prefers-reduced-motion:no-preference){.mark{animation:pulse 2.8s ease-in-out infinite}@keyframes pulse{50%{box-shadow:0 0 9px #187d73}}}\n</style><body><div class=\"shell\">\n<div class=\"top\"><div><div class=\"logo\">DrFX<i>Ai</i> <span style=\"font-weight:400\">| Admin</span></div><div class=\"sub\">SIGNAL CONTENT COMMAND</div></div><div class=\"mark\">● PRIVATE</div></div>\n<div class=\"flow\"><span>01 RECEIVE</span><span>→</span><b>02 REVIEW</b><span>→</span><span>03 PUBLISH</span></div>\n<div class=\"box\"><div class=\"line\"><b>↗ Forwarded Signal</b><span class=\"count\" id=\"ref\">#—</span></div>\n<div class=\"line\" style=\"margin-top:9px\"><span class=\"pending\" id=\"state\">PENDING REVIEW</span><span id=\"kind\">TEXT</span></div>\n<div class=\"hero\"><div class=\"asset\" id=\"symbol\">SIGNAL REVIEW</div><div class=\"side\" id=\"side\">DRAFT</div></div>\n<div class=\"snapshot\" id=\"content\">Preview loading…</div>\n<div class=\"levels\" id=\"levels\"><div class=\"level\"><small>ENTRY</small><b id=\"entry\">—</b></div><div class=\"level loss\"><small>STOP LOSS</small><b id=\"sl\">—</b></div><div class=\"level profit\"><small>TARGET 1</small><b id=\"tp1\">—</b></div><div class=\"level profit\"><small>TARGET 2 / 3</small><b id=\"tp23\">—</b></div></div>\n<div class=\"stats\"><span class=\"chip\" id=\"verified\">UNVERIFIED DRAFT</span><span class=\"chip neutral\">ADMIN ONLY</span></div></div>\n<div class=\"buttons\"><button id=\"reject\" class=\"danger\">✕ Reject</button><button id=\"edit\">✎ Edit</button><button class=\"main\" id=\"approve\">✓ Review</button></div>\n<div class=\"buttons\" id=\"publishArea\" hidden><button class=\"main\" id=\"publish\">↗ Confirm &amp; Publish</button><button id=\"cancel\">Cancel</button></div>\n<div id=\"notice\" class=\"status\">Review values before any publication.</div>\n<div class=\"foot\"><span>DR FX AI · CONTROLLED PUBLISH</span><span>NO AUTO-SEND</span></div></div>\n<script>\n(function(){\nvar T=window.TelegramWidget,d=document,s={},armed=false;\ntry{s=JSON.parse(T&&T.chatData||'{}')}catch(x){}\nfunction e(k){return d.getElementById(k)}\nfunction txt(k,v){e(k).textContent=v===null||v===undefined||v===''?'—':String(v)}\nfunction draw(){\ntxt('ref','#'+(s.id||'?'));txt('state',String(s.status||'review').toUpperCase());\ntxt('kind',s.kind==='image'?'PHOTO · MINI APP':'TEXT SIGNAL');\ntxt('content',s.text||'No preview available');txt('symbol',s.signal&&s.signal.symbol||'SIGNAL REVIEW');\ntxt('side',s.signal&&s.signal.side||'DRAFT');\ne('side').className='side'+(s.signal&&s.signal.side==='SELL'?' sell':'');\ntxt('entry',s.signal&&(s.signal.zone||s.signal.entry));txt('sl',s.signal&&s.signal.sl);\nvar v=s.signal&&s.signal.tps||[];txt('tp1',v[0]);txt('tp23',[v[1],v[2]].filter(function(x){return x!==null&&x!==undefined}).join(' / '));\ntxt('verified',s.signal?'PARSED · CHECK PRICES':'REVIEW REQUIRED');\ne('approve').disabled=!T||s.status!=='review'||s.kind==='image'||s.publishEnabled!==true;\ne('reject').disabled=!T||s.status!=='review';\ne('publishArea').hidden=!armed||s.status!=='review';\n}\nfunction act(op){\nif(!T||!s.id)return;\ntxt('notice','Processing…');T.request('drfx:'+op+':'+s.id).then(function(r){\nvar a={};try{a=JSON.parse(r.result||'{}')}catch(x){}\nif(a.status)s.status=a.status;armed=false;draw();txt('notice',a.message||'Status refreshed');\n},function(x){txt('notice','Request failed: '+(x.code||'FAILED'))});\n}\ne('approve').onclick=function(){armed=true;draw();txt('notice','Confirm to publish to DR FX AI channel')};\ne('publish').onclick=function(){act('publish')};\ne('cancel').onclick=function(){armed=false;draw()};\ne('reject').onclick=function(){act('reject')};\ne('edit').onclick=function(){if(T&&T.openTelegramLink)T.openTelegramLink('https://t.me/drfxa_bot?startapp=review');else txt('notice','Open the Mini App from the bot menu')};\nif(T)T.onEvent('chatDataChanged',function(){try{s=JSON.parse(T.chatData||'{}');armed=false;draw()}catch(x){}});\ndraw();if(T&&T.ready)T.ready();\n})();\n</script></body></html>";
 }
 export function drfxReviewChatData(item,publishEnabled=false){
- // Telegram limits chat_data to 1024 UTF-8 bytes, not 1024 characters.
- const state={id:Number(item.id),kind:item.file_id?'image':'text',status:String(item.status||'review').slice(0,24),publishEnabled:publishEnabled===true,text:''};
+ // Never inject user content into widget HTML; keep the entire state under Telegram's 1024-byte limit.
+ const sig=(()=>{try{return item.signal_json?JSON.parse(item.signal_json):null}catch{return null}})();
+ const safe=sig&&['BUY','SELL'].includes(sig.side)&&/^[A-Z0-9._-]{1,32}$/.test(String(sig.symbol||''))
+  ? {symbol:sig.symbol,side:sig.side,entry:Number.isFinite(sig.entry)?sig.entry:null,
+     zone:typeof sig.entryZone==='string'?sig.entryZone.slice(0,50):null,
+     sl:Number.isFinite(sig.sl)?sig.sl:null,
+     tps:Array.isArray(sig.tps)?sig.tps.filter(Number.isFinite).slice(0,3):[]} :null;
+ const state={id:Number(item.id),kind:item.file_id?'image':'text',status:String(item.status||'review').slice(0,24),publishEnabled:publishEnabled===true,signal:safe,text:''};
  const chars=Array.from(String(item.draft_text||item.original_text||'')).slice(0,300);
- const encoder=new TextEncoder();
- let low=0,high=chars.length;
- while(low<high){
-  const mid=Math.ceil((low+high)/2);
-  state.text=chars.slice(0,mid).join('');
-  if(encoder.encode(JSON.stringify(state)).byteLength<=1024)low=mid;
-  else high=mid-1;
- }
- state.text=chars.slice(0,low).join('');
- return JSON.stringify(state);
+ const encoder=new TextEncoder();let low=0,high=chars.length;
+ while(low<high){const mid=Math.ceil((low+high)/2);state.text=chars.slice(0,mid).join('');
+  if(encoder.encode(JSON.stringify(state)).byteLength<=1024)low=mid;else high=mid-1;}
+ state.text=chars.slice(0,low).join('');return JSON.stringify(state);
 }
 async function drfxWidgetAnswer(env,id,data){
  try{await tg(env,'answerWidgetQuery',{widget_query_id:id,data:JSON.stringify(data)});}
