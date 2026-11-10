@@ -812,6 +812,45 @@ async function handleApi(req,env,path){
  }
  return j({error:'Method not allowed'},405);
 }
+async function drfxEnsureWidgetMenus(env,origin){
+ // Reconcile the bot command menu separately from webhook setup; previously a
+ // matching setup hash short-circuited the entire command/menu installation.
+ const required=[
+  {command:'start',description:'Start DrFX Admin'},
+  {command:'help',description:'How to review and publish signals'},
+  {command:'review',description:'Review latest pending signal widget'},
+  {command:'widgets',description:'Open the current review widget'},
+  {command:'widgetstatus',description:'Diagnose Telegram widgets'}
+ ];
+ try{
+  const current=await tg(env,'getMyCommands',{});
+  if(!Array.isArray(current)||required.some(x=>!current.some(y=>y.command===x.command)))
+   await tg(env,'setMyCommands',{commands:required});
+ }catch(e){console.warn('Widget commands update failed: '+String(e?.message||e).slice(0,130))}
+ try{
+  const current=await tg(env,'getChatMenuButton',{});
+  if(current?.type!=='web_app'||current.web_app?.url!==origin)
+   await tg(env,'setChatMenuButton',{menu_button:{type:'web_app',text:'DrFX Admin',web_app:{url:origin}}});
+ }catch(e){console.warn('Widget Mini App menu update failed: '+String(e?.message||e).slice(0,130))}
+}
+async function drfxWidgetOneTimeProbe(env,origin){
+ const release='drfx-admin-widget-probe-20261110-v1';
+ const row=await env.DB.prepare("SELECT value FROM settings WHERE key='widget_probe_release'").first();
+ if(row?.value===release)return;
+ try{
+  const identity=await tg(env,'getMe',{});
+  if(String(identity?.username||'').toLowerCase()!=='drfxa_bot')throw Error('Bot identity is not @drfxa_bot');
+  const sample={id:0,status:'demo',file_id:null,draft_text:'Widget UI diagnostic — not an actual signal or trading order',signal_json:null};
+  await drfxSendReviewWidget(env,String(env.ADMIN_TELEGRAM_USER_ID),sample,'DrFX Admin · Widget Test (no signal, no channel publication)',origin);
+  await drfxWidgetDeliveryState(env,'probe_ok');
+ }catch(e){
+  const reason=String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,105);
+  await drfxWidgetDeliveryState(env,'probe_failed:'+reason);
+  console.warn('One-time private widget diagnostic failed: '+reason);
+ }finally{
+  await env.DB.prepare("INSERT INTO settings(key,value) VALUES('widget_probe_release',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(release).run();
+ }
+}
 const drfxApp = {
  async scheduled(controller,env){
   try{await pruneInbox(env);}catch(e){console.warn('DrFX housekeeping failed: '+String(e?.message||e).slice(0,100));}
@@ -819,25 +858,25 @@ const drfxApp = {
   try{const old=await env.DB.prepare("SELECT inbox.* FROM inbox LEFT JOIN image_edits ON image_edits.inbox_id=inbox.id WHERE inbox.file_id IS NOT NULL AND inbox.status='review' AND image_edits.inbox_id IS NULL ORDER BY inbox.id DESC LIMIT 1").first();if(old)await scanImage(env,old);}catch(e){console.warn('Image scan cron failed: '+String(e?.message||e).slice(0,120));}
   if(!env.BOT_TOKEN||!env.WEBHOOK_SECRET||!env.ADMIN_TELEGRAM_USER_ID||!env.DESTINATION_CHAT_ID)return;
   const origin=String(env.PUBLIC_URL||'https://drfx-admin.drfxai.workers.dev').replace(/\/$/,'');
-  const material=new TextEncoder().encode([env.BOT_TOKEN,env.WEBHOOK_SECRET,origin,'drfx-v0.5-native-widgets'].join('\n'));
+  const material=new TextEncoder().encode([env.BOT_TOKEN,env.WEBHOOK_SECRET,origin,'drfx-v0.6-widget-interaction-fix'].join('\n'));
   const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',material))].map(x=>x.toString(16).padStart(2,'0')).join('');
   const prior=await env.DB.prepare("SELECT value FROM settings WHERE key='telegram_setup_sha256'").first();
-  if(prior?.value===hash){
-    try{
-     const info=await tg(env,'getWebhookInfo',{});
-     if(info?.url===origin+'/telegram'&&Array.isArray(info.allowed_updates)&&info.allowed_updates.includes('widget_query'))return;
-    }catch(e){console.warn('DrFX webhook check failed: '+String(e?.message||e).slice(0,120));}
-   }
+  let needsWebhook=prior?.value!==hash;
   try{
-   const bot=await tg(env,'getMe',{});
-   if(String(bot?.username||'').toLowerCase()!=='drfxa_bot')throw Error('BOT_TOKEN mismatch: expected @Drfxa_bot, got a different bot username');
-   await tg(env,'setWebhook',{url:origin+'/telegram',secret_token:env.WEBHOOK_SECRET,allowed_updates:['message','callback_query','widget_query'],drop_pending_updates:false});
-   console.log('DrFX webhook installed for @Drfxa_bot');
-   await env.DB.prepare("INSERT INTO settings(key,value) VALUES('telegram_setup_sha256',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(hash).run();
-   console.log('DrFX Telegram webhook setup complete');
-   try{await tg(env,'setMyCommands',{commands:[{command:'start',description:'شروع و راهنمای ربات'},{command:'help',description:'راهنمای دریافت و انتشار سیگنال'},{command:'review',description:'Review the latest draft in a native widget'},{command:'widgets',description:'Open the latest review widget'}]});}catch(e){console.warn('DrFX optional commands setup failed: '+String(e?.message||e).slice(0,160));}
-   try{await tg(env,'setMenuButton',{menu_button:{type:'web_app',text:'DrFX Admin',web_app:{url:origin}}});}catch(e){console.warn('DrFX optional Mini App menu setup failed: '+String(e?.message||e).slice(0,160));}
-  }catch(e){console.warn('DrFX Telegram setup failed: '+String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,240));}
+   const info=await tg(env,'getWebhookInfo',{});
+   if(info?.url!==origin+'/telegram'||!Array.isArray(info?.allowed_updates)||!info.allowed_updates.includes('widget_query'))needsWebhook=true;
+  }catch(e){needsWebhook=true;console.warn('Widget webhook state check failed: '+String(e?.message||e).slice(0,120))}
+  if(needsWebhook){
+   try{
+    const bot=await tg(env,'getMe',{});
+    if(String(bot?.username||'').toLowerCase()!=='drfxa_bot')throw Error('BOT_TOKEN mismatch: expected @Drfxa_bot');
+    await tg(env,'setWebhook',{url:origin+'/telegram',secret_token:env.WEBHOOK_SECRET,
+     allowed_updates:['message','callback_query','widget_query'],drop_pending_updates:false});
+    await env.DB.prepare("INSERT INTO settings(key,value) VALUES('telegram_setup_sha256',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(hash).run();
+   }catch(e){console.warn('Widget webhook setup failed: '+String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,130));return}
+  }
+  await drfxEnsureWidgetMenus(env,origin);
+  await drfxWidgetOneTimeProbe(env,origin);
  },
  async fetch(req,env,ctx){
   const path=new URL(req.url).pathname;
