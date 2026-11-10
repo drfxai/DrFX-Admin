@@ -17,7 +17,8 @@ for (const [url, type, filename, binary] of files) {
     ? { type, base64: bytes.toString('base64') }
     : { type, text: bytes.toString('utf8') };
 }
-const runtime = await readFile(resolve('src/worker-runtime.mjs'), 'utf8');
+const identity = (await readFile(resolve('src/identity-intel.mjs'), 'utf8')).replace(/^export /gm, '');
+const runtime = identity + '\n' + await readFile(resolve('src/worker-runtime.mjs'), 'utf8');
 const output = '// DrFX Admin v0.2 Worker single-module deploy, generated from source files\n'
   + 'const __drfxStatic = ' + JSON.stringify(manifest) + ';\n' + runtime;
 if (process.argv.includes('--check')) {
@@ -26,7 +27,7 @@ if (process.argv.includes('--check')) {
     console.error('Bundle mismatch: run npm run build and review before committing.');
     process.exitCode = 1;
   } else {
-    console.log('Bundle matches deployed Cloudflare v56 snapshot.');
+    console.log('Bundle matches committed Worker bundle.');
   }
 } else {
   await mkdir(resolve('dist'), { recursive: true });
