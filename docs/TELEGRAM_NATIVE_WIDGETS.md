@@ -21,3 +21,9 @@ Staging checklist:
 Rollback: set DRFX_WIDGET_PUBLISH_ENABLED=false, then redeploy the previous Worker if needed. Do not change or drop production D1 tables.
 
 Reference: https://core.telegram.org/bots/widgets
+
+Production release notes (Nov 10, 2026):
+- Both /review and /widgets are available in private admin chats. The command menu exposes both.
+- DRFX_WIDGET_AUTOSEND_ENABLED=true allows safe automatic review widgets after new submissions; on Telegram rejection it falls back to the legacy message. No automatic publication is enabled by this flag.
+- DRFX_WIDGET_PUBLISH_ENABLED remains false until a live bot and channel publish-confirmation exercise is completed. The admin can publish through the existing Mini App.
+- The 5-minute cron checks getWebhookInfo and restores widget_query updates if the webhook changed, without storing secrets in logs.
