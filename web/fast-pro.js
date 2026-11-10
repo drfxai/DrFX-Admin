@@ -1,8 +1,8 @@
 /* FAST / PRO workspace; live actions reuse the authenticated publishing API. */
-export function createFastMode({el,state,selected,publish,goPro,refresh,isBusy,esc,toast}){
+export function createFastMode({el,state,selected,publish,remove,goPro,refresh,isBusy,esc,toast}){
  let filter='review';
- const eligible=x=>x?.status==='review'&&!x.has_photo&&!!x.signal&&!state.settings.emergencyStop;
- const tag=x=>x.status==='sent'?'PUBLISHED':x.status==='failed'?'RECOVERY':eligible(x)?'READY':'REVIEW';
+ const eligible=x=>x?.status==='review'&&!state.settings.emergencyStop&&Boolean(x.has_photo||x.signal||String(x.draft_text||'').trim());
+ const tag=x=>x.status==='sent'?'PUBLISHED':x.status==='failed'?'RECOVERY':eligible(x)?(x.has_photo?'AUTO CHECK':'READY'):'REVIEW';
  function render(){
   const queue=el('fastQueue');if(!queue)return;
   const all=state.items||[];
@@ -35,10 +35,11 @@ export function createFastMode({el,state,selected,publish,goPro,refresh,isBusy,e
     '<div class="fx-card-title"><strong>'+symbol+'</strong><span class="fx-side '+dirClass+'">'+direction+'</span></div>'+
     '<div class="fx-levels">'+level('ENTRY',x.signal?.entryZone||x.signal?.entry)+level('STOP LOSS',x.signal?.sl)+level('TAKE PROFIT',x.signal?.tps?.filter(Number.isFinite).at(-1))+'</div>'+
     '<div class="fx-draft">'+(draft||'پیامی برای نمایش وجود ندارد')+'</div>'+
-    '<div class="fx-identity-row"><span>✧ '+(x.has_photo?'تصویر: بازبینی بصری الزامی':'متن: بررسی شناسه‌ها')+'</span><strong>'+(idCount?idCount+' شناسه خارجی در منبع':'شناسه خارجی شناسایی نشد')+'</strong></div>'+
+    '<div class="fx-identity-row"><span>✧ '+(x.has_photo?'تصویر: بررسی هوشمند OCR':'متن: کنترل شناسه‌ها')+'</span><strong>'+(idCount?idCount+' شناسه خارجی در منبع':'شناسه خارجی شناسایی نشد')+'</strong></div>'+
     '<div class="fx-actions">'+
       '<button class="fx-btn publish" type="button" data-fx="publish" data-id="'+Number(x.id)+'" '+(canPublish&&!isBusy()?'':'disabled')+'>'+(canPublish?'↗ انتشار':'نیازمند بازبینی')+'</button>'+
-      '<button class="fx-btn" type="button" data-fx="inspect" data-id="'+Number(x.id)+'">✎ بررسی و ویرایش</button>'+
+      '<button class="fx-btn" type="button" data-fx="inspect" data-id="'+Number(x.id)+'">✎ ویرایش</button>'+
+      '<button class="fx-btn delete" type="button" data-fx="delete" data-id="'+Number(x.id)+'" '+(x.status==='sending'?'disabled':'')+'>⌫ حذف</button>'+
     '</div>';
    queue.append(card);
   }
@@ -50,8 +51,9 @@ export function createFastMode({el,state,selected,publish,goPro,refresh,isBusy,e
    const id=Number(button.dataset.id),x=state.items.find(item=>item.id===id);
    if(!x)return;
    if(button.dataset.fx==='inspect'){goPro(id,x.has_photo?'media':x.status==='failed'?'publish':'content');return;}
+   if(button.dataset.fx==='delete'){await remove(id);render();return;}
    if(button.dataset.fx==='publish'){
-    if(!eligible(x)){toast('ابتدا در بخش Pro اطلاعات پیام را بررسی و تأیید کنید.');return;}
+    if(!eligible(x)){toast('این پیام هنوز شرایط انتشار سریع را ندارد.');return;}
     button.disabled=true;button.textContent='در حال انتشار…';
     try{await publish(id);}finally{render();}
    }
