@@ -90,7 +90,7 @@ test('production widget commands are registered and webhook is self healing',()=
 
 test('admin action stays usable while publication is deliberately disabled',()=>{
  const html=drfxReviewWidgetHtml();
- assert.match(html,/txt\('approve',s\.publishEnabled===true/);
+ assert.match(html,/txt\('approve',s\.quickReady===true&&s\.publishEnabled===true/);
  assert.match(html,/openAdmin\(\);return/);
  assert.match(html,/act\('status'\)/);
  assert.match(source,/command:'widgetstatus'/);
