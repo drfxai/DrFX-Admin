@@ -44,3 +44,12 @@
 .assistant-auto-toggle[aria-pressed=true]{border-color:#44dfb9;background:linear-gradient(110deg,#0e8679,#117498);box-shadow:0 0 18px rgba(20,193,178,.22);color:#fff}
 #homePublish[data-action=publish]{border-color:#51f0d0!important;box-shadow:0 0 18px rgba(40,195,177,.23)!important}
 @media(max-width:425px){.assistant-quickbar{gap:9px;padding:11px}.assistant-auto-toggle{min-width:96px;padding:10px 7px}.assistant-quickbar small{font-size:10px}}
+
+/* Three focused content actions: primary publish, quiet edit, restrained destructive delete */
+.assistant-featured .assistant-actions{display:grid;grid-template-columns:1.5fr 1fr .85fr;gap:9px;align-items:stretch}
+.assistant-featured .assistant-actions .assistant-button{min-width:0;display:flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;font-weight:850;min-height:46px;border-radius:12px}
+.assistant-featured #homePublish{background:linear-gradient(115deg,#0aa88b,#0b7cb2);color:#fff;border:1px solid rgba(99,246,214,.76);box-shadow:inset 0 1px rgba(255,255,255,.1),0 0 20px rgba(18,166,156,.18)}
+.assistant-featured #homeEdit{border:1px solid rgba(135,175,201,.37);background:rgba(21,43,62,.84);color:#ddf3ff}
+.assistant-featured #homeDelete{background:rgba(75,24,42,.33);border:1px solid rgba(220,110,132,.39);color:#ffb1bf}
+.assistant-featured .assistant-button:disabled{opacity:.48;box-shadow:none!important;cursor:default}
+@media(max-width:425px){.assistant-featured .assistant-actions{grid-template-columns:1.3fr 1fr .8fr;gap:6px}.assistant-featured .assistant-actions .assistant-button{padding:10px 5px;font-size:11px}}
