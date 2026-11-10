@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {deflateSync} from 'node:zlib';
-import {drfxReviewWidgetHtml,drfxReviewChatData} from '../src/worker-runtime.mjs';
+import {drfxReviewWidgetHtml,drfxPhotoReviewWidgetHtml,drfxReviewChatData} from '../src/worker-runtime.mjs';
 
 const source=readFileSync(new URL('../src/worker-runtime.mjs',import.meta.url),'utf8');
 
@@ -125,4 +125,15 @@ test('widget fast publication is enabled only for owner-reviewed content',()=>{
  assert.match(source,/await publishRow\(env,row,currentSettings,false,cleaned\)/);
  assert.match(source,/quick-publish'&&method==='POST'/);
  assert.match(source,/if\(configuration.emergencyStop\)/);
+});
+
+test('compact photo widget has interactive controls and leaves room for JPEG bytes',()=>{
+ const html=drfxPhotoReviewWidgetHtml();
+ assert.match(html,/id="photoPreview"/);
+ assert.ok(Buffer.byteLength(html,'utf8')<=32768);
+ assert.ok(deflateSync(Buffer.from(html),{level:9}).byteLength<=2400,
+ 'photo renderer should reserve at least 1.6KB for a JPEG thumbnail');
+ assert.match(html,/TelegramWidget/);
+ assert.match(html,/drfx:/);
+ assert.doesNotMatch(html,/<img[^>]*src="https?:/);
 });
