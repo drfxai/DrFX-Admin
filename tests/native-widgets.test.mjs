@@ -58,3 +58,11 @@ test('Persian, emoji and escaped content always remain below Telegram chat_data 
  }
  assert.match(drfxReviewWidgetHtml(),/s\.publishEnabled===true/);
 });
+
+test('automatic widgets are off by default and retain legacy fallback',()=>{
+ assert.match(source,/DRFX_WIDGET_AUTOSEND_ENABLED==='true'/);
+ assert.match(source,/!attempted&&current\?\.status==='review'/);
+ assert.match(source,/widgetSent=true/);
+ assert.match(source,/if\(!widgetSent\)/);
+ assert.match(source,/reply_markup:\{inline_keyboard:kb\}/);
+});
