@@ -56,7 +56,7 @@ test('Persian, emoji and escaped content always remain below Telegram chat_data 
   assert.equal(JSON.parse(drfxReviewChatData(item,true)).publishEnabled,true);
   assert.ok(Buffer.byteLength(drfxReviewChatData(item,true),'utf8')<=1024);
  }
- assert.match(drfxReviewWidgetHtml(),/s\.publishEnabled===true/);
+ assert.match(drfxReviewWidgetHtml(),/s\.publishEnabled!==true/);
 });
 
 test('automatic widgets are off by default and retain legacy fallback',()=>{
