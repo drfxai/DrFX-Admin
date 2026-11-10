@@ -56,3 +56,8 @@ test('HTML body has balanced non-void tags for Pro editor and Settings',()=>{
  }
  assert.deepEqual(stack,[]);
 });
+
+test('Home prioritizes sent and failed delivery state over photo review',()=>{
+ assert.match(js,/publish\.dataset\.action=can\?'publish':x\?\.status==='failed'\?'recover':x\?\.status==='sent'\?'result':x\?\.has_photo\?'media'/);
+ assert.match(js,/showHomeItem\(false,\(x\.status==='sent'\|\|x\.status==='failed'\)\?'publish':x\.has_photo\?'media'/);
+});
