@@ -350,7 +350,7 @@ function safeQuickSignal(m,sig,photo){
  const maxAge=m.forward_origin?90*60:10*60;
  return stamp>0&&Math.abs(Date.now()/1000-stamp)<=maxAge;
 }
-function eligibleForAutoContent(m,parsed,photo){
+export function eligibleForAutoContent(m,parsed,photo){
  if(photo)return false;
  if(parsed)return safeQuickSignal(m,parsed,false);
  const text=toAscii(String(m.caption||m.text||'')).trim();
@@ -362,7 +362,7 @@ function eligibleForAutoContent(m,parsed,photo){
  // Do not auto relay unknown advertisements, contact details, or channel promotions.
  return !/https?:\/\/|www\.|t\.me\/|@[A-Za-z_][A-Za-z0-9_]{4,}|(?:\b\w+[.-]?\w+@\w+\.\w+\b)/i.test(text);
 }
-function autoPhotoSignalReady(item,fresh,cfg){
+export function autoPhotoSignalReady(item,fresh,cfg){
  const caption=parseSignal(item.original_text),ocr=parseSignal(fresh.ocr_text);
  if(!caption||!ocr||cfg.scan_status==='approved')return false;
  if(cfg.redactions?.length||cfg.detected_labels?.some(x=>x!=='trade:unverified'))return false;
