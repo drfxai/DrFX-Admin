@@ -428,7 +428,7 @@ export function drfxReviewChatData(item,publishEnabled=false,quickReady=!item?.f
  state.text=chars.slice(0,low).join('');return JSON.stringify(state);
 }
 export function drfxPhotoReviewWidgetHtml(){
- return \`<!doctype html><html><style>
+ return `<!doctype html><html><style>
 *{box-sizing:border-box}body{margin:0;background:#071524;color:#eef7ff;font:12px system-ui,sans-serif}
 .card{padding:12px;border:1px solid #237e85;border-radius:17px;background:radial-gradient(ellipse at 95% 0%,#12536a,#091927 62%);overflow:hidden}
 .row{display:flex;justify-content:space-between;align-items:center;gap:9px}
@@ -458,7 +458,7 @@ e('publish').onclick=function(){act('publish')};e('cancel').onclick=function(){a
 e('edit').onclick=openAdmin;e('reject').onclick=function(){act('reject')};e('refresh').onclick=function(){act('status')};
 if(T)T.onEvent('chatDataChanged',function(){try{s=JSON.parse(T.chatData||'{}');armed=false;draw()}catch(x){}});
 draw();if(T&&T.ready)T.ready();
-})();</script></body></html>\`;
+})();</script></body></html>`;
 }
 async function drfxBuildReviewWidgetHtml(env,item){
  const base=item?.file_id?drfxPhotoReviewWidgetHtml():drfxReviewWidgetHtml();
