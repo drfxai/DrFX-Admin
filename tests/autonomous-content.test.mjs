@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {eligibleForAutoContent,autoPhotoSignalReady} from '../src/worker-runtime.mjs';
+import {eligibleForAutoContent,autoPhotoSignalReady} from '../dist/worker.mjs';
 const code=readFileSync(new URL('../src/worker-runtime.mjs',import.meta.url),'utf8');
 const now=()=>Math.floor(Date.now()/1000);
 
