@@ -51,13 +51,13 @@ async function loadPhoto(x){
 const imageData=new Map(),imagePending=new Set();
 async function ensureImageData(x){if(!x?.has_photo||imageData.has(x.id)||imagePending.has(x.id)||demo)return;imagePending.add(x.id);try{const r=await api('/api/items/'+x.id+'/image');imageData.set(x.id,r.image_edit);showImageData();}catch(e){toast(e.message);}finally{imagePending.delete(x.id);}}
 
-const visualState={itemId:null,url:null,drawing:null};
+const visualState={itemId:null,url:null,drawing:null,loading:false};
 const visualClamp=n=>Math.max(0,Math.min(1,n));
 function visualPoint(e){const r=el('visualOverlay').getBoundingClientRect();return {x:visualClamp((e.clientX-r.left)/Math.max(1,r.width)),y:visualClamp((e.clientY-r.top)/Math.max(1,r.height))};}
 function visualBox(x,y,w,h,cls){const d=document.createElement('div');d.className=cls;d.style.left=x*100+'%';d.style.top=y*100+'%';d.style.width=w*100+'%';d.style.height=h*100+'%';return d;}
 async function loadVisualSource(item){
- if(visualState.itemId===item.id)return;
- visualState.itemId=item.id;visualState.drawing=null;
+ if(visualState.itemId===item.id&&(visualState.url||visualState.loading||demo))return;
+ visualState.itemId=item.id;visualState.drawing=null;visualState.loading=true;
  const img=el('visualSource'),empty=el('visualStageEmpty');
  if(visualState.url){URL.revokeObjectURL(visualState.url);visualState.url=null;}
  img.removeAttribute('src');empty.hidden=false;empty.textContent='در حال دریافت تصویر اصلی…';
@@ -68,10 +68,10 @@ async function loadVisualSource(item){
   const blob=await res.blob(),url=URL.createObjectURL(blob);
   if(visualState.itemId!==item.id){URL.revokeObjectURL(url);return;}
   visualState.url=url;
-  img.onload=()=>{if(visualState.itemId===item.id){empty.hidden=true;renderVisualEditor();}};
-  img.onerror=()=>{empty.hidden=false;empty.textContent='تصویر اصلی قابل نمایش نیست.';};
+  img.onload=()=>{if(visualState.itemId===item.id){visualState.loading=false;empty.hidden=true;renderVisualEditor();}};
+  img.onerror=()=>{if(visualState.itemId!==item.id)return;empty.hidden=false;empty.textContent='تصویر اصلی قابل نمایش نیست. دوباره تلاش کنید.';if(visualState.url){URL.revokeObjectURL(visualState.url);visualState.url=null;}visualState.loading=false;visualState.itemId=null;};
   img.src=url;
- }catch(e){if(visualState.itemId===item.id)empty.textContent='دریافت تصویر اصلی ناموفق بود.';}
+ }catch(e){if(visualState.itemId===item.id){empty.textContent='دریافت تصویر اصلی ناموفق بود. دوباره تلاش کنید.';visualState.itemId=null;}}finally{visualState.loading=false;}
 }
 function renderVisualEditor(){
  const x=selected(),v=x&&imageData.get(x.id),over=el('visualOverlay');
