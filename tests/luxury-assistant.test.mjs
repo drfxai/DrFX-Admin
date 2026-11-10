@@ -9,7 +9,7 @@ test('three destination navigation remains minimal',()=>{
  for(const match of nav)assert.deepEqual([...match[1].matchAll(/data-page="([^"]+)"/g)].map(x=>x[1]),['home','inbox','settings']);
 });
 test('home content card has safe actions and live-binding targets',()=>{
- const ids=['home','homeSymbol','homeSide','homeEntry','homeStop','homeTargets','homeSafety','homePublish','homeEdit','homePreview','homeOpenInbox'];
+ const ids=['home','homeSymbol','homeSide','homeEntry','homeStop','homeTargets','homeSafety','homePublish','homeEdit','homeDelete','homeOpenInbox'];
  for(const id of ids)assert.equal((html.match(new RegExp('id="'+id+'"','g'))||[]).length,1,id);
  assert.match(js,/function renderHome\(\)/);
  assert.match(js,/function homeCanPublish\(x\)/);
