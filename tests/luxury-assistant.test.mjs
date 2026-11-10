@@ -44,5 +44,5 @@ test('Home offers fast publish and explicit automatic publishing preference',()=
  assert.match(html,/⚡ انتشار سریع/);
  assert.match(js,/el\('homeAutoPublish'\)\.addEventListener/);
  assert.match(js,/quick-publish/);
- assert.match(js,/imageData\.get\(x\.id\)\?\.scan_status==='approved'/);
+ assert.match(js,/await quickPublish\(item\.id\)/);
 });

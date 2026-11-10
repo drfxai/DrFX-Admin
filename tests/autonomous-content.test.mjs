@@ -34,15 +34,15 @@ test('auto approved photo requires caption and independent OCR to agree on each 
  assert.equal(autoPhotoSignalReady(row,fresh,{...clean,scan_note:'Automatic verification incomplete: ocr'}),false);
  assert.equal(autoPhotoSignalReady({...row,original_text:signal+'\nFollow @foreign_signals'},fresh,clean),false);
 });
-test('autonomous image workflow uses strict verification and never retries an unknown send',()=>{
+test('autonomous image workflow verifies image sources and does not retry uncertain sends',()=>{
  for(const needle of [
-  'const job=drfxAutoPhotoWorkflow(env,item,m,s',
-  'if(ctx?.waitUntil)ctx.waitUntil(job)',
-  'cfg=await scanImage(env,item)',
-  'const signal=autoImageCandidate(item,fresh.ocr_text,secondOcr)',
-  'await publishRow(env,fresh,s,false,ready.photo)',
+  "const job=drfxAutoPhotoWorkflow(env,item,m,s",
+  "if(ctx?.waitUntil)ctx.waitUntil(job)",
+  "cfg=await scanImage(env,item)",
+  "const signal=autoImageCandidate(item,fresh.ocr_text,secondOcr)",
+  "await publishRow(env,fresh,s,false,ready.photo)",
   "if(!current||current.status!=='review')return",
   "scan_status:'approved'",
-  'scanSettings.scanDepth===\\'deep\\'||scanSettings.autoPublish===true'
- ])assert.ok(code.includes(needle.replaceAll("\\\\'", "'")),needle);
+  "scanSettings.scanDepth==='deep'||scanSettings.autoPublish===true"
+ ])assert.ok(code.includes(needle),needle);
 });
