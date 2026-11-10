@@ -86,6 +86,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <link rel="stylesheet" href="./fast-pro.css?v=1.0.0"/>
 <link rel="stylesheet" href="./luxury.css?v=0.4.0"/>
 <link rel="stylesheet" href="./polish.css?v=0.4.1"/>
+<link rel="stylesheet" href="./media-fix.css?v=0.4.3"/>
 </head>
 <body>
 <div class="shell">
@@ -122,12 +123,12 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
  <section class="assistant-featured" aria-label="پیام منتخب برای انتشار">
   <header class="assistant-featured-head"><div class="assistant-featured-id"><span id="homeItemId">—</span><span class="assistant-featured-state" id="homeItemState">در انتظار</span></div><span class="assistant-featured-time" id="homeItemAge">—</span></header>
   <div class="assistant-featured-body">
-   <div class="assistant-featured-chart assistant-art-panel" aria-label="مشخصات پیام؛ نمودار قیمتی ساختگی نمایش داده نمی‌شود"><div class="assistant-art-icon" aria-hidden="true">◇</div><strong id="homeArtSymbol">SIGNAL</strong><small id="homeArtType">MESSAGE</small><span>DR FX AI</span></div>
+   <div class="assistant-featured-chart assistant-art-panel" id="homeMediaPanel" aria-live="polite" aria-label="پیش‌نمایش امن تصویر اصلی پیام"><img id="homeSourceImage" class="assistant-home-source" alt="تصویر اصلی دریافت‌شده از تلگرام" hidden/><div class="assistant-art-fallback" id="homeArtFallback"><div class="assistant-art-icon" aria-hidden="true">◇</div><strong id="homeArtSymbol">SIGNAL</strong><small id="homeArtType">MESSAGE</small><span>DR FX AI</span></div><div id="homeMediaState" class="assistant-home-media-status" hidden role="status">در حال دریافت تصویر…</div><button type="button" id="homeMediaRetry" class="assistant-home-media-retry" hidden>↻ تلاش مجدد برای نمایش تصویر</button></div>
    <div class="assistant-featured-content">
     <div class="assistant-featured-title"><strong id="homeSymbol">منتظر دریافت پیام</strong><span id="homeSide" class="assistant-side">—</span></div>
     <div class="assistant-signal-levels"><div><span>ENTRY</span><strong id="homeEntry">—</strong></div><div><span>STOP LOSS</span><strong id="homeStop">—</strong></div></div>
     <div class="assistant-targets" id="homeTargets"></div>
-    <div class="assistant-draft-small" id="homeExcerpt">اولین پیام را به ربات ارسال کنید تا برای بررسی نمایش داده شود.</div>
+    <div class="assistant-draft-small" id="homeExcerpt">اولین پیام را به ربات ارسال کنید تا برای بررسی نمایش داده شود.</div><div class="assistant-ocr-status" id="homeOcrStatus" hidden role="status"></div>
    </div>
   </div>
   <div class="assistant-safety" id="homeSafety"><span class="assistant-safety-icon">✓</span><span id="homeSafetyText">کنترل ایمنی قبل از انتشار فعال است.</span></div>
@@ -246,5 +247,5 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 <nav class="bottomnav" aria-label="ناوبری اصلی"><button class="active" data-page="home"><span>⌂</span>خانه</button><button data-page="inbox"><span>▣</span>صندوق <b id="mobilePending" class="assistant-nav-count" hidden>0</b></button><button data-page="settings"><span>⚙</span>تنظیمات</button></nav>
 <div class="toast" id="toast"></div>
 <div class="modalwrap" id="confirmModal" aria-hidden="true"><div class="modal"><div class="eyebrow">FINAL APPROVAL</div><h3>تأیید انتشار سیگنال</h3><p id="confirmText">آیا محتوای سیگنال بررسی شده و برای انتشار آماده است؟</p><div class="actionbar"><button class="btn" id="cancelPublish">انصراف</button><button class="btn primary" id="confirmPublish">↗ انتشار در کانال</button></div></div></div>
-<script type="module" src="./app.js?v=0.4.2"></script>
+<script type="module" src="./app.js?v=0.4.3"></script>
 </body></html>
