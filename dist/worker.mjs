@@ -669,7 +669,23 @@ async function handleWebhook(req,env,ctx){
    if(oneTap)kb.push([{text:'🚀 انتشار با یک لمس',callback_data:'pub:'+item.id}]);
    kb.push([{text:'✏️ بررسی در پنل',web_app:{url:new URL(req.url).origin}}]);
    const msg=attempted?'⚠️ انتشار خودکار ناموفق یا نامطمئن بود. کانال را بررسی کنید.':photo?'🖼️ تصویر دریافت شد؛ برای انتشار نسخه ویرایش‌شده به Mini App بروید.':parsed?'📥 سیگنال دریافت شد.':'📥 پیام دریافت شد؛ نیاز به بررسی دارد.';
-   try{await tg(env,'sendMessage',{chat_id:m.chat.id,text:msg,reply_markup:{inline_keyboard:kb}});}catch(e){console.warn('Bot response failed: '+String(e?.message||e).slice(0,150));}
+   // Optional native review card for the admin; preserve the legacy menu as fallback.
+   // Never offer automatic retry after an uncertain publication attempt.
+   let widgetSent=false;
+   if(env.DRFX_WIDGET_AUTOSEND_ENABLED==='true'&&!attempted&&current?.status==='review'){
+    try{
+     await tg(env,'sendWidget',{
+      chat_id:m.chat.id,html:drfxReviewWidgetHtml(),
+      chat_data:drfxReviewChatData(current,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),
+      caption:msg+' Open Mini App for advanced editing.',height:320,allow_queries:true,protect_content:true
+     });
+     widgetSent=true;
+    }catch(e){console.warn('Widget unavailable; using legacy reply: '+String(e?.message||e).slice(0,100));}
+   }
+   if(!widgetSent){
+    try{await tg(env,'sendMessage',{chat_id:m.chat.id,text:msg,reply_markup:{inline_keyboard:kb}});}
+    catch(e){console.warn('Bot response failed: '+String(e?.message||e).slice(0,150));}
+   }
   }
  }
  return j({ok:true,stored:Boolean(r.meta.changes)});
