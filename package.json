@@ -1,9 +1,9 @@
 {
   "name": "drfx-admin",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
-  "description": "DrFX Admin Fast/Pro Mini App with signal validation and identifier intelligence",
+  "description": "Focused channel assistant for editing and publishing standardized content",
   "scripts": {
     "build": "node scripts/build.mjs",
     "check:bundle": "node scripts/build.mjs --check",

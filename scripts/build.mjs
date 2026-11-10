@@ -8,6 +8,7 @@ const files = [
   ['/index.html', 'text/html; charset=utf-8', 'web/index.html', false],
   ['/app.js', 'text/javascript; charset=utf-8', 'web/app.js', false],
   ['/fast-pro.css', 'text/css; charset=utf-8', 'web/fast-pro.css', false],
+  ['/luxury.css', 'text/css; charset=utf-8', 'web/luxury.css', false],
   ['/fast-pro.js', 'text/javascript; charset=utf-8', 'web/fast-pro.js', false],
   ['/assets/card-base.jpg', 'image/jpeg', 'web/assets/card-base.jpg', true],
   ['/assets/demo-chart.jpg', 'image/jpeg', 'web/assets/demo-chart.jpg', true],
