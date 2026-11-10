@@ -28,17 +28,17 @@ export function createFastMode({el,state,selected,publish,goPro,refresh,isBusy,e
    const direction=esc(x.signal?.side||'CHECK');
    const dirClass=x.signal?.side==='BUY'?'buy':x.signal?.side==='SELL'?'sell':'';
    const level=(label,val)=>'<div class="fx-level"><small>'+label+'</small><strong>'+esc(val??'—')+'</strong></div>';
-   const draft=esc(String(x.draft_text||x.original_text||'').slice(0,280));
+   const draft=esc(String(x.draft_text||x.original_text||'').replace(/\s+/g,' ').slice(0,160));
    const idCount=identities.length;
    card.innerHTML=
     '<div class="fx-card-head"><div class="fx-id"><b>#'+Number(x.id)+'</b><span>'+source+'</span></div><span class="fx-status '+(status==='READY'?'ready':'check')+'">'+status+'</span></div>'+
     '<div class="fx-card-title"><strong>'+symbol+'</strong><span class="fx-side '+dirClass+'">'+direction+'</span></div>'+
     '<div class="fx-levels">'+level('ENTRY',x.signal?.entryZone||x.signal?.entry)+level('STOP LOSS',x.signal?.sl)+level('TAKE PROFIT',x.signal?.tps?.filter(Number.isFinite).at(-1))+'</div>'+
-    '<div class="fx-draft">'+(draft||'No preview available')+'</div>'+
+    '<div class="fx-draft">'+(draft||'پیامی برای نمایش وجود ندارد')+'</div>'+
     '<div class="fx-identity-row"><span>✧ '+(x.has_photo?'تصویر: بازبینی بصری الزامی':'متن: بررسی شناسه‌ها')+'</span><strong>'+(idCount?idCount+' شناسه خارجی در منبع':'شناسه خارجی شناسایی نشد')+'</strong></div>'+
     '<div class="fx-actions">'+
-      '<button class="fx-btn publish" type="button" data-fx="publish" data-id="'+Number(x.id)+'" '+(canPublish&&!isBusy()?'':'disabled')+'>'+(canPublish?'↗ انتشار با یک کلیک':'نیازمند بررسی Pro')+'</button>'+
-      '<button class="fx-btn" type="button" data-fx="inspect" data-id="'+Number(x.id)+'">✦ بررسی پیشرفته</button>'+
+      '<button class="fx-btn publish" type="button" data-fx="publish" data-id="'+Number(x.id)+'" '+(canPublish&&!isBusy()?'':'disabled')+'>'+(canPublish?'↗ انتشار':'نیازمند بازبینی')+'</button>'+
+      '<button class="fx-btn" type="button" data-fx="inspect" data-id="'+Number(x.id)+'">✎ بررسی و ویرایش</button>'+
     '</div>';
    queue.append(card);
   }
@@ -49,7 +49,7 @@ export function createFastMode({el,state,selected,publish,goPro,refresh,isBusy,e
    const button=e.target.closest('button[data-fx]');if(!button||isBusy())return;
    const id=Number(button.dataset.id),x=state.items.find(item=>item.id===id);
    if(!x)return;
-   if(button.dataset.fx==='inspect'){goPro(id);return;}
+   if(button.dataset.fx==='inspect'){goPro(id,x.has_photo?'media':x.status==='failed'?'publish':'content');return;}
    if(button.dataset.fx==='publish'){
     if(!eligible(x)){toast('ابتدا در بخش Pro اطلاعات پیام را بررسی و تأیید کنید.');return;}
     button.disabled=true;button.textContent='در حال انتشار…';
