@@ -92,7 +92,7 @@ test('admin action stays usable while publication is deliberately disabled',()=>
  const html=drfxReviewWidgetHtml();
  assert.match(html,/txt\('approve',s\.quickReady===true&&s\.publishEnabled===true/);
  assert.match(html,/openAdmin\(\);return/);
- assert.match(html,/act\('status'\)/);
+ assert.match(html,/act\('delete'\)/);
  assert.match(source,/command:'widgetstatus'/);
  assert.match(source,/async function drfxWidgetOneTimeProbe/);
  assert.match(source,/status:'demo'/);
@@ -124,6 +124,8 @@ test('widget fast publication is enabled only for owner-reviewed content',()=>{
  assert.match(source,/new Uint8Array\(await brandPhoto/);
  assert.match(source,/await publishRow\(env,row,currentSettings,false,cleaned\)/);
  assert.match(source,/quick-publish'&&method==='POST'/);
+ assert.match(source,/^.*drfxAutoPhotoWorkflow.*$/m);
+ assert.match(source,/const deleted=await env.DB.prepare/);
  assert.match(source,/if\(configuration.emergencyStop\)/);
 });
 
