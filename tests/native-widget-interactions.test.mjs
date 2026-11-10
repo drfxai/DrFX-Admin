@@ -26,7 +26,7 @@ test('admin widget shows parsed prices, but never sends an unapproved channel pu
  assert.equal(w.get('symbol').textContent,'XAUUSD');
  assert.equal(w.get('entry').textContent,'4075');
  assert.equal(w.get('sl').textContent,'4065');
- assert.equal(w.get('approve').disabled,true);
+ assert.equal(w.get('approve').disabled,false);
  assert.equal(w.get('publishArea').hidden,true);
  assert.deepEqual(w.actions,['ready']);
 });
@@ -50,7 +50,7 @@ test('reject calls the correct native query, and images remain Mini App only',as
  assert.ok(w.actions.includes('drfx:reject:17'));
  assert.equal(w.get('reject').disabled,true);
  const photo=boot(drfxReviewChatData({...row,file_id:'photo_id'},true));
- assert.equal(photo.get('approve').disabled,true);
+ assert.equal(photo.get('approve').disabled,false);
  photo.get('edit').onclick();
  assert.equal(photo.links.length,1);
  assert.match(photo.links[0],/^https:\/\/t\.me\//);
@@ -61,4 +61,21 @@ test('Telegram chatDataChanged updates a card in place without a request',()=>{
  w.events.get('chatDataChanged')();
  assert.equal(w.get('state').textContent,'SENT');
  assert.deepEqual(w.actions,['ready']);
+});
+
+
+test('Review opens Admin Mini App when widget publication is off',()=>{
+ const w=boot(drfxReviewChatData(row,false));
+ w.get('approve').onclick();
+ assert.equal(w.links.length,1);
+ assert.match(w.links[0],/t\.me\/drfxa_bot\?startapp=review/);
+ assert.ok(!w.actions.some(x=>String(x).includes('publish')));
+});
+
+test('status query reports the authoritative state without publishing',async()=>{
+ const w=boot(drfxReviewChatData(row,false),{'drfx:status:17':{status:'review',message:'Current status: review'}});
+ w.get('refresh').onclick();await tick();
+ assert.ok(w.actions.includes('drfx:status:17'));
+ assert.equal(w.get('publishArea').hidden,true);
+ assert.equal(w.get('notice').textContent,'Current status: review');
 });

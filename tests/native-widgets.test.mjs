@@ -67,16 +67,16 @@ test('automatic widgets are off by default and retain legacy fallback',()=>{
  assert.match(source,/reply_markup:\{inline_keyboard:kb\}/);
 });
 
-test('native callbacks accept only data queries and widgets use intrinsic height',()=>{
- assert.match(source,/q\.type\?\.type!=='data'/);
- assert.match(source,/!ok\|\|q\.type\?\.type!=='data'\|\|!m/);
- const sends=source.match(/sendWidget['"],\{[\s\S]*?\}\)/g)||[];
- assert.ok(sends.length>=2,'both manual and auto widget delivery present');
- for(const send of sends){
-  assert.doesNotMatch(send,/height\s*:/);
-  assert.match(send,/allow_queries:true/);
-  assert.match(send,/chat_data:drfxReviewChatData/);
- }
+test('widget callback accepts data queries with optional type and sends safe Mini App fallback',()=>{
+ assert.match(source,/q\.type!=null&&q\.type\?\.type!=='data'/);
+ assert.match(source,/async function drfxSendReviewWidget/);
+ assert.match(source,/await tg\(env,'sendWidget',payload\)/);
+ assert.match(source,/allow_queries:true,protect_content:true/);
+ assert.match(source,/chat_data:drfxReviewChatData\(item/);
+ assert.match(source,/web_app:\{url:appUrl\}/);
+ assert.match(source,/Manual widget unavailable; using admin Mini App fallback/);
+ assert.match(source,/setChatMenuButton/);
+ assert.doesNotMatch(source,/setMenuButton/);
 });
 
 test('production widget commands are registered and webhook is self healing',()=>{
@@ -84,5 +84,17 @@ test('production widget commands are registered and webhook is self healing',()=
  assert.match(source,/command:'widgets'/);
  assert.match(source,/getWebhookInfo/);
  assert.match(source,/info\.allowed_updates\.includes\('widget_query'\)/);
- assert.match(source,/drfx-v0\.5-native-widgets/);
+ assert.match(source,/drfx-v0\.6-widget-interaction-fix/);
+});
+
+
+test('admin action stays usable while publication is deliberately disabled',()=>{
+ const html=drfxReviewWidgetHtml();
+ assert.match(html,/txt\('approve',s\.publishEnabled===true/);
+ assert.match(html,/openAdmin\(\);return/);
+ assert.match(html,/act\('status'\)/);
+ assert.match(source,/command:'widgetstatus'/);
+ assert.match(source,/async function drfxWidgetOneTimeProbe/);
+ assert.match(source,/status:'demo'/);
+ assert.match(source,/widget_probe_release/);
 });

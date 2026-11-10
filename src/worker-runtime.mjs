@@ -410,7 +410,7 @@ async function pruneInbox(env){
  * provided through chat_data, never injected into executable HTML.
  */
 export function drfxReviewWidgetHtml(){
- return "<!doctype html><html><style>\n*{box-sizing:border-box}body{margin:0;padding:0;font:13px system-ui,sans-serif;color:#eaf5ff;background:#061522}\n.shell{padding:13px;border-radius:18px;border:1px solid #1a7386;background:radial-gradient(ellipse at 95% 0%,#073e51,transparent 49%),linear-gradient(145deg,#071c2e,#06101d 72%);box-shadow:inset 0 0 0 1px #16435b,0 0 16px #083e53;overflow:hidden}\n.top,.line,.buttons,.hero,.flow,.levels,.foot{display:flex;align-items:center;justify-content:space-between;gap:8px}\n.logo{font-size:20px;font-weight:900;letter-spacing:-.7px}.logo i{font-style:normal;color:#35e5cd}.sub{font-size:9px;color:#9bb6c8;letter-spacing:1.7px}.mark{font-weight:800;font-size:9px;border:1px solid #4eddb6;color:#63edd2;border-radius:15px;padding:5px 9px;background:#063b3a}\n.flow{margin:11px 0;padding:8px 11px;border:1px solid #214659;border-radius:11px;background:#10283d;font-size:10px;color:#9fbad2}.flow b{color:#6cf3dd}.flow span{color:#34bfce}\n.box{border:1px solid #28566b;border-radius:14px;padding:11px;background:linear-gradient(120deg,#0c2639,#081725)}\n.line{font-size:11px;color:#b3cede}.count{color:#5ae7ee;font-weight:800}.pending{color:#ffe1a0;border:1px solid #ab8147;background:#3d2c15;border-radius:13px;padding:4px 8px;font-size:10px}\n.hero{margin:11px 0 8px}.asset{font-size:22px;font-weight:900;letter-spacing:.5px}.side{border:1px solid #25d7ad;background:#053a33;color:#75ffe2;border-radius:8px;padding:5px 11px;font-size:14px;font-weight:900}.side.sell{color:#ffacb6;border-color:#d15b6c;background:#3d1725}\n.snapshot{font:11px/1.45 system-ui,sans-serif;color:#b7d1e0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:46px;overflow:hidden;margin:7px 0;padding:8px;border-radius:8px;background:#10283a}\n.levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:8px}\n.level{border:1px solid #214457;background:#10283a;border-radius:8px;padding:7px 8px}.level small{display:block;color:#86a9bc;font-size:9px}.level b{display:block;color:#e7f4ff;font-size:12px;font-variant-numeric:tabular-nums}.level.loss b{color:#ff879b}.level.profit b{color:#63ecd1}\n.stats{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}.chip{font-size:9px;border:1px solid #236a68;color:#7fead7;border-radius:13px;padding:4px 8px;background:#0a3134}.chip.neutral{color:#a7c4db;border-color:#36516e}\n.buttons{margin-top:11px}button{font:700 11px system-ui,sans-serif;border-radius:10px;padding:11px 4px;border:1px solid #306579;background:#132f45;color:#d9f4ff;flex:1;min-width:0}\nbutton.main{background:linear-gradient(115deg,#0e806c,#0b5989);border-color:#45d9d0;color:#fff;box-shadow:0 0 12px #075e65}\nbutton.danger{background:#311d2e;border-color:#9e4c68;color:#ffbdc4}button:disabled{opacity:.43}\n.foot{font-size:9px;margin-top:10px;color:#88a5bd}.status{color:#cbe4f4;min-height:13px;margin-top:7px;font-size:10px}\n@media(prefers-color-scheme:light){body{background:#eaf4f6}.shell{background:linear-gradient(140deg,#0b293f,#092037)}}\n@media(prefers-reduced-motion:no-preference){.mark{animation:pulse 2.8s ease-in-out infinite}@keyframes pulse{50%{box-shadow:0 0 9px #187d73}}}\n</style><body><div class=\"shell\">\n<div class=\"top\"><div><div class=\"logo\">DrFX<i>Ai</i> <span style=\"font-weight:400\">| Admin</span></div><div class=\"sub\">SIGNAL CONTENT COMMAND</div></div><div class=\"mark\">● PRIVATE</div></div>\n<div class=\"flow\"><span>01 RECEIVE</span><span>→</span><b>02 REVIEW</b><span>→</span><span>03 PUBLISH</span></div>\n<div class=\"box\"><div class=\"line\"><b>↗ Forwarded Signal</b><span class=\"count\" id=\"ref\">#—</span></div>\n<div class=\"line\" style=\"margin-top:9px\"><span class=\"pending\" id=\"state\">PENDING REVIEW</span><span id=\"kind\">TEXT</span></div>\n<div class=\"hero\"><div class=\"asset\" id=\"symbol\">SIGNAL REVIEW</div><div class=\"side\" id=\"side\">DRAFT</div></div>\n<div class=\"snapshot\" id=\"content\">Preview loading…</div>\n<div class=\"levels\" id=\"levels\"><div class=\"level\"><small>ENTRY</small><b id=\"entry\">—</b></div><div class=\"level loss\"><small>STOP LOSS</small><b id=\"sl\">—</b></div><div class=\"level profit\"><small>TARGET 1</small><b id=\"tp1\">—</b></div><div class=\"level profit\"><small>TARGET 2 / 3</small><b id=\"tp23\">—</b></div></div>\n<div class=\"stats\"><span class=\"chip\" id=\"verified\">UNVERIFIED DRAFT</span><span class=\"chip neutral\">ADMIN ONLY</span></div></div>\n<div class=\"buttons\"><button id=\"reject\" class=\"danger\">✕ Reject</button><button id=\"edit\">✎ Edit</button><button class=\"main\" id=\"approve\">✓ Review</button></div>\n<div class=\"buttons\" id=\"publishArea\" hidden><button class=\"main\" id=\"publish\">↗ Confirm &amp; Publish</button><button id=\"cancel\">Cancel</button></div>\n<div id=\"notice\" class=\"status\">Review values before any publication.</div>\n<div class=\"foot\"><span>DR FX AI · CONTROLLED PUBLISH</span><span>NO AUTO-SEND</span></div></div>\n<script>\n(function(){\nvar T=window.TelegramWidget,d=document,s={},armed=false;\ntry{s=JSON.parse(T&&T.chatData||'{}')}catch(x){}\nfunction e(k){return d.getElementById(k)}\nfunction txt(k,v){e(k).textContent=v===null||v===undefined||v===''?'—':String(v)}\nfunction draw(){\ntxt('ref','#'+(s.id||'?'));txt('state',String(s.status||'review').toUpperCase());\ntxt('kind',s.kind==='image'?'PHOTO · MINI APP':'TEXT SIGNAL');\ntxt('content',s.text||'No preview available');txt('symbol',s.signal&&s.signal.symbol||'SIGNAL REVIEW');\ntxt('side',s.signal&&s.signal.side||'DRAFT');\ne('side').className='side'+(s.signal&&s.signal.side==='SELL'?' sell':'');\ntxt('entry',s.signal&&(s.signal.zone||s.signal.entry));txt('sl',s.signal&&s.signal.sl);\nvar v=s.signal&&s.signal.tps||[];txt('tp1',v[0]);txt('tp23',[v[1],v[2]].filter(function(x){return x!==null&&x!==undefined}).join(' / '));\ntxt('verified',s.signal?'PARSED · CHECK PRICES':'REVIEW REQUIRED');\ne('approve').disabled=!T||s.status!=='review'||s.kind==='image'||s.publishEnabled!==true;\ne('reject').disabled=!T||s.status!=='review';\ne('publishArea').hidden=!armed||s.status!=='review';\n}\nfunction act(op){\nif(!T||!s.id)return;\ntxt('notice','Processing…');T.request('drfx:'+op+':'+s.id).then(function(r){\nvar a={};try{a=JSON.parse(r.result||'{}')}catch(x){}\nif(a.status)s.status=a.status;armed=false;draw();txt('notice',a.message||'Status refreshed');\n},function(x){txt('notice','Request failed: '+(x.code||'FAILED'))});\n}\ne('approve').onclick=function(){armed=true;draw();txt('notice','Confirm to publish to DR FX AI channel')};\ne('publish').onclick=function(){act('publish')};\ne('cancel').onclick=function(){armed=false;draw()};\ne('reject').onclick=function(){act('reject')};\ne('edit').onclick=function(){if(T&&T.openTelegramLink)T.openTelegramLink('https://t.me/drfxa_bot?startapp=review');else txt('notice','Open the Mini App from the bot menu')};\nif(T)T.onEvent('chatDataChanged',function(){try{s=JSON.parse(T.chatData||'{}');armed=false;draw()}catch(x){}});\ndraw();if(T&&T.ready)T.ready();\n})();\n</script></body></html>";
+ return "<!doctype html><html><style>\n*{box-sizing:border-box}body{margin:0;padding:0;font:13px system-ui,sans-serif;color:#eaf5ff;background:#061522}\n.shell{padding:13px;border-radius:18px;border:1px solid #1a7386;background:radial-gradient(ellipse at 95% 0%,#073e51,transparent 49%),linear-gradient(145deg,#071c2e,#06101d 72%);box-shadow:inset 0 0 0 1px #16435b,0 0 16px #083e53;overflow:hidden}\n.top,.line,.buttons,.hero,.flow,.levels,.foot{display:flex;align-items:center;justify-content:space-between;gap:8px}\n.logo{font-size:20px;font-weight:900;letter-spacing:-.7px}.logo i{font-style:normal;color:#35e5cd}.sub{font-size:9px;color:#9bb6c8;letter-spacing:1.7px}.mark{font-weight:800;font-size:9px;border:1px solid #4eddb6;color:#63edd2;border-radius:15px;padding:5px 9px;background:#063b3a}\n.flow{margin:11px 0;padding:8px 11px;border:1px solid #214659;border-radius:11px;background:#10283d;font-size:10px;color:#9fbad2}.flow b{color:#6cf3dd}.flow span{color:#34bfce}\n.box{border:1px solid #28566b;border-radius:14px;padding:11px;background:linear-gradient(120deg,#0c2639,#081725)}\n.line{font-size:11px;color:#b3cede}.count{color:#5ae7ee;font-weight:800}.pending{color:#ffe1a0;border:1px solid #ab8147;background:#3d2c15;border-radius:13px;padding:4px 8px;font-size:10px}\n.hero{margin:11px 0 8px}.asset{font-size:22px;font-weight:900;letter-spacing:.5px}.side{border:1px solid #25d7ad;background:#053a33;color:#75ffe2;border-radius:8px;padding:5px 11px;font-size:14px;font-weight:900}.side.sell{color:#ffacb6;border-color:#d15b6c;background:#3d1725}\n.snapshot{font:11px/1.45 system-ui,sans-serif;color:#b7d1e0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:46px;overflow:hidden;margin:7px 0;padding:8px;border-radius:8px;background:#10283a}\n.levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:8px}\n.level{border:1px solid #214457;background:#10283a;border-radius:8px;padding:7px 8px}.level small{display:block;color:#86a9bc;font-size:9px}.level b{display:block;color:#e7f4ff;font-size:12px;font-variant-numeric:tabular-nums}.level.loss b{color:#ff879b}.level.profit b{color:#63ecd1}\n.stats{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}.chip{font-size:9px;border:1px solid #236a68;color:#7fead7;border-radius:13px;padding:4px 8px;background:#0a3134}.chip.neutral{color:#a7c4db;border-color:#36516e}\n.buttons{margin-top:11px}button{font:700 11px system-ui,sans-serif;border-radius:10px;padding:11px 4px;border:1px solid #306579;background:#132f45;color:#d9f4ff;flex:1;min-width:0}\nbutton.main{background:linear-gradient(115deg,#0e806c,#0b5989);border-color:#45d9d0;color:#fff;box-shadow:0 0 12px #075e65}\nbutton.danger{background:#311d2e;border-color:#9e4c68;color:#ffbdc4}button:disabled{opacity:.43}\n.foot{font-size:9px;margin-top:10px;color:#88a5bd}.status{color:#cbe4f4;min-height:13px;margin-top:7px;font-size:10px}\n@media(prefers-color-scheme:light){body{background:#eaf4f6}.shell{background:linear-gradient(140deg,#0b293f,#092037)}}\n@media(prefers-reduced-motion:no-preference){.mark{animation:pulse 2.8s ease-in-out infinite}@keyframes pulse{50%{box-shadow:0 0 9px #187d73}}}\n</style><body><div class=\"shell\">\n<div class=\"top\"><div><div class=\"logo\">DrFX<i>Ai</i> <span style=\"font-weight:400\">| Admin</span></div><div class=\"sub\">SIGNAL CONTENT COMMAND</div></div><div class=\"mark\">● PRIVATE</div></div>\n<div class=\"flow\"><span>01 RECEIVE</span><span>→</span><b>02 REVIEW</b><span>→</span><span>03 PUBLISH</span></div>\n<div class=\"box\"><div class=\"line\"><b>↗ Forwarded Signal</b><span class=\"count\" id=\"ref\">#—</span></div>\n<div class=\"line\" style=\"margin-top:9px\"><span class=\"pending\" id=\"state\">PENDING REVIEW</span><span id=\"kind\">TEXT</span></div>\n<div class=\"hero\"><div class=\"asset\" id=\"symbol\">SIGNAL REVIEW</div><div class=\"side\" id=\"side\">DRAFT</div></div>\n<div class=\"snapshot\" id=\"content\">Preview loading…</div>\n<div class=\"levels\" id=\"levels\"><div class=\"level\"><small>ENTRY</small><b id=\"entry\">—</b></div><div class=\"level loss\"><small>STOP LOSS</small><b id=\"sl\">—</b></div><div class=\"level profit\"><small>TARGET 1</small><b id=\"tp1\">—</b></div><div class=\"level profit\"><small>TARGET 2 / 3</small><b id=\"tp23\">—</b></div></div>\n<div class=\"stats\"><span class=\"chip\" id=\"verified\">UNVERIFIED DRAFT</span><span class=\"chip neutral\">ADMIN ONLY</span></div></div>\n<div class=\"buttons\"><button id=\"reject\" class=\"danger\">✕ Reject</button><button id=\"refresh\">↻ Status</button></div><div class=\"buttons\"><button id=\"edit\">✎ Edit</button><button class=\"main\" id=\"approve\">↗ Open Admin</button></div>\n<div class=\"buttons\" id=\"publishArea\" hidden><button class=\"main\" id=\"publish\">↗ Confirm &amp; Publish</button><button id=\"cancel\">Cancel</button></div>\n<div id=\"notice\" class=\"status\">Review values before any publication.</div>\n<div class=\"foot\"><span>DR FX AI · CONTROLLED PUBLISH</span><span>MANUAL PUBLICATION</span></div></div>\n<script>\n(function(){\nvar T=window.TelegramWidget,d=document,s={},armed=false;\ntry{s=JSON.parse(T&&T.chatData||'{}')}catch(x){}\nfunction e(k){return d.getElementById(k)}\nfunction txt(k,v){e(k).textContent=v===null||v===undefined||v===''?'—':String(v)}\nfunction draw(){\ntxt('ref','#'+(s.id||'?'));txt('state',String(s.status||'review').toUpperCase());\ntxt('kind',s.kind==='image'?'PHOTO · MINI APP':'TEXT SIGNAL');\ntxt('content',s.text||'No preview available');txt('symbol',s.signal&&s.signal.symbol||'SIGNAL REVIEW');\ntxt('side',s.signal&&s.signal.side||'DRAFT');\ne('side').className='side'+(s.signal&&s.signal.side==='SELL'?' sell':'');\ntxt('entry',s.signal&&(s.signal.zone||s.signal.entry));txt('sl',s.signal&&s.signal.sl);\nvar v=s.signal&&s.signal.tps||[];txt('tp1',v[0]);txt('tp23',[v[1],v[2]].filter(function(x){return x!==null&&x!==undefined}).join(' / '));\ntxt('verified',s.signal?'PARSED · CHECK PRICES':'REVIEW REQUIRED');\ne('approve').disabled=!T||s.status!=='review';\ntxt('approve',s.publishEnabled===true&&s.kind!=='image'?'✓ Review & Publish':'↗ Open Admin');\ne('reject').disabled=!T||s.status!=='review';\ne('publishArea').hidden=!armed||s.status!=='review';\n}\nfunction act(op){\nif(!T||!s.id)return;\ntxt('notice','Processing…');\ntry{T.request('drfx:'+op+':'+s.id).then(function(r){\nvar a={};try{a=JSON.parse(r.result||'{}')}catch(x){}\nif(a.status)s.status=a.status;armed=false;draw();txt('notice',a.message||'Status refreshed');\n},function(x){txt('notice','Request failed: '+(x.code||'FAILED'))})}\ncatch(x){txt('notice','Request unavailable: '+(x.code||'TRY AGAIN'))}\n}\nfunction openAdmin(){if(T&&T.openTelegramLink)T.openTelegramLink('https://t.me/drfxa_bot?startapp=review');else txt('notice','Open the Admin Mini App from the button below the card')}\ne('approve').onclick=function(){if(s.publishEnabled!==true||s.kind==='image'){openAdmin();return}armed=true;draw();txt('notice','Confirm to publish to DR FX AI channel')};\ne('refresh').onclick=function(){act('status')};\ne('publish').onclick=function(){act('publish')};\ne('cancel').onclick=function(){armed=false;draw()};\ne('reject').onclick=function(){act('reject')};\ne('edit').onclick=openAdmin;\nif(T)T.onEvent('chatDataChanged',function(){try{s=JSON.parse(T.chatData||'{}');armed=false;draw()}catch(x){}});\ndraw();if(T&&T.ready)T.ready();\n})();\n</script></body></html>";
 }
 export function drfxReviewChatData(item,publishEnabled=false){
  // Never inject user content into widget HTML; keep the entire state under Telegram's 1024-byte limit.
@@ -427,6 +427,26 @@ export function drfxReviewChatData(item,publishEnabled=false){
   if(encoder.encode(JSON.stringify(state)).byteLength<=1024)low=mid;else high=mid-1;}
  state.text=chars.slice(0,low).join('');return JSON.stringify(state);
 }
+async function drfxWidgetDeliveryState(env,state){
+ // Diagnostics are message-free; never store a token, Telegram identity or signal content.
+ try{await env.DB.prepare("INSERT INTO settings(key,value) VALUES('widget_delivery_status',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(String(state).slice(0,150)).run()}catch{}
+}
+async function drfxSendReviewWidget(env,chatId,item,caption,origin){
+ const appUrl=String(env.PUBLIC_URL||origin||'https://drfx-admin.drfxai.workers.dev').replace(/\/$/,'');
+ const payload={chat_id:chatId,html:drfxReviewWidgetHtml(),
+  chat_data:drfxReviewChatData(item,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),
+  allow_queries:true,protect_content:true,caption,
+  reply_markup:{inline_keyboard:[[{text:'✎ Open Admin Mini App',web_app:{url:appUrl}}]]}};
+ try{
+  const delivered=await tg(env,'sendWidget',payload);
+  await drfxWidgetDeliveryState(env,'ok');
+  return delivered;
+ }catch(e){
+  const description=String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,120);
+  await drfxWidgetDeliveryState(env,'failed:'+description);
+  throw e;
+ }
+}
 async function drfxWidgetAnswer(env,id,data){
  try{await tg(env,'answerWidgetQuery',{widget_query_id:id,data:JSON.stringify(data)});}
  catch(e){console.warn('Widget answer failed: '+String(e?.message||e).slice(0,100));}
@@ -440,7 +460,7 @@ async function drfxWidgetQuery(q,env,ctx){
  if(!q?.id)return j({ok:true,ignored:true});
  const ok=q.chat?.type==='private'&&String(q.from?.id)===String(env.ADMIN_TELEGRAM_USER_ID)&&String(q.chat?.id)===String(q.from?.id)&&Number.isSafeInteger(Number(q.message_id))&&!q.inline_message_id;
  const m=/^drfx:(status|publish|reject):([1-9]\d{0,10})$/.exec(String(q.data||''));
- if(!ok||q.type?.type!=='data'||!m){await drfxWidgetAnswer(env,q.id,{message:'Not authorized'});return j({ok:true,denied:true});}
+ if(!ok||(q.type!=null&&q.type?.type!=='data')||!m){await drfxWidgetAnswer(env,q.id,{message:'Not authorized'});return j({ok:true,denied:true});}
  const row=await getItem(env,m[2]);
  if(!row||String(row.admin_id)!==String(q.from.id)||String(row.origin_chat_id)!==String(q.chat.id)){
   await drfxWidgetAnswer(env,q.id,{message:'Message unavailable'});return j({ok:true,denied:true});
@@ -527,10 +547,34 @@ async function handleWebhook(req,env,ctx){
  if(/^\/(?:review|widgets)(?:@\w+)?$/.test(command)){
   const row=await env.DB.prepare("SELECT * FROM inbox WHERE admin_id=? AND status='review' ORDER BY id DESC LIMIT 1").bind(String(m.from.id)).first();
   if(!row){await tg(env,'sendMessage',{chat_id:m.chat.id,text:'✅ No pending review items.'});return j({ok:true,empty:true});}
-  await tg(env,'sendWidget',{chat_id:m.chat.id,html:drfxReviewWidgetHtml(),chat_data:drfxReviewChatData(row,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),allow_queries:true,caption:'DrFX Admin · Review #'+row.id+' (private admin chat only)'});
-  return j({ok:true,widget_sent:true});
+  try{
+   await drfxSendReviewWidget(env,m.chat.id,row,'DrFX Admin · Review #'+row.id+' (private admin chat only)',new URL(req.url).origin);
+   return j({ok:true,widget_sent:true});
+  }catch(e){
+   console.warn('Manual widget unavailable; using admin Mini App fallback');
+   await tg(env,'sendMessage',{chat_id:m.chat.id,text:'⚠️ Telegram widget could not load. Open Admin Mini App to review the latest draft.',reply_markup:{inline_keyboard:[[{text:'✏️ Open Admin Mini App',web_app:{url:new URL(req.url).origin}}]]}}).catch(()=>{});
+   return j({ok:true,widget_sent:false,fallback_sent:true});
+  }
  }
 
+ if(/^\/widgetstatus(?:@\w+)?$/.test(command)){
+  const base=String(env.PUBLIC_URL||new URL(req.url).origin).replace(/\/$/,'');
+  const [info,commands,menu,last]=await Promise.all([
+   tg(env,'getWebhookInfo',{}).catch(()=>null),
+   tg(env,'getMyCommands',{}).catch(()=>null),
+   tg(env,'getChatMenuButton',{}).catch(()=>null),
+   env.DB.prepare("SELECT value FROM settings WHERE key='widget_delivery_status'").first().catch(()=>null)
+  ]);
+  const hookOk=info?.url===base+'/telegram'&&Array.isArray(info?.allowed_updates)&&info.allowed_updates.includes('widget_query');
+  const cmdOk=Array.isArray(commands)&&commands.some(c=>c.command==='review')&&commands.some(c=>c.command==='widgets');
+  const msg=['DrFX Admin · Widget Diagnostics','Webhook: '+(hookOk?'OK':'CHECK'),
+   'Widget commands: '+(cmdOk?'OK':'CHECK'),'Mini App: '+(menu?.type==='web_app'?'OK':'CHECK'),
+   'Last delivery: '+String(last?.value||'not attempted').slice(0,120),
+   'Widget publication: '+(env.DRFX_WIDGET_PUBLISH_ENABLED==='true'?'ENABLED':'DISABLED (safe)'),
+   'Use /review to open the latest draft.'].join('\n');
+  await tg(env,'sendMessage',{chat_id:m.chat.id,text:msg}).catch(()=>{});
+  return j({ok:true,diagnostic:true});
+ }
  if(/^\/(pause|resume|status)(?:@\w+)?$/.test(command)){
   const op=command.split('@')[0];
   if(op==='/pause'||op==='/resume')await env.DB.prepare("INSERT INTO settings(key,value) VALUES('emergencyStop',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(op==='/pause'?'true':'false').run();
@@ -578,11 +622,7 @@ async function handleWebhook(req,env,ctx){
    let widgetSent=false;
    if(env.DRFX_WIDGET_AUTOSEND_ENABLED==='true'&&!attempted&&current?.status==='review'){
     try{
-     await tg(env,'sendWidget',{
-      chat_id:m.chat.id,html:drfxReviewWidgetHtml(),
-      chat_data:drfxReviewChatData(current,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),
-      caption:msg+' Open Mini App for advanced editing.',allow_queries:true,protect_content:true
-     });
+     await drfxSendReviewWidget(env,m.chat.id,current,msg+' Open Mini App for advanced editing.',new URL(req.url).origin);
      widgetSent=true;
     }catch(e){console.warn('Widget unavailable; using legacy reply: '+String(e?.message||e).slice(0,100));}
    }
@@ -772,6 +812,45 @@ async function handleApi(req,env,path){
  }
  return j({error:'Method not allowed'},405);
 }
+async function drfxEnsureWidgetMenus(env,origin){
+ // Reconcile the bot command menu separately from webhook setup; previously a
+ // matching setup hash short-circuited the entire command/menu installation.
+ const required=[
+  {command:'start',description:'Start DrFX Admin'},
+  {command:'help',description:'How to review and publish signals'},
+  {command:'review',description:'Review latest pending signal widget'},
+  {command:'widgets',description:'Open the current review widget'},
+  {command:'widgetstatus',description:'Diagnose Telegram widgets'}
+ ];
+ try{
+  const current=await tg(env,'getMyCommands',{});
+  if(!Array.isArray(current)||required.some(x=>!current.some(y=>y.command===x.command)))
+   await tg(env,'setMyCommands',{commands:required});
+ }catch(e){console.warn('Widget commands update failed: '+String(e?.message||e).slice(0,130))}
+ try{
+  const current=await tg(env,'getChatMenuButton',{});
+  if(current?.type!=='web_app'||current.web_app?.url!==origin)
+   await tg(env,'setChatMenuButton',{menu_button:{type:'web_app',text:'DrFX Admin',web_app:{url:origin}}});
+ }catch(e){console.warn('Widget Mini App menu update failed: '+String(e?.message||e).slice(0,130))}
+}
+async function drfxWidgetOneTimeProbe(env,origin){
+ const release='drfx-admin-widget-probe-20261110-v1';
+ const row=await env.DB.prepare("SELECT value FROM settings WHERE key='widget_probe_release'").first();
+ if(row?.value===release)return;
+ try{
+  const identity=await tg(env,'getMe',{});
+  if(String(identity?.username||'').toLowerCase()!=='drfxa_bot')throw Error('Bot identity is not @drfxa_bot');
+  const sample={id:0,status:'demo',file_id:null,draft_text:'Widget UI diagnostic — not an actual signal or trading order',signal_json:null};
+  await drfxSendReviewWidget(env,String(env.ADMIN_TELEGRAM_USER_ID),sample,'DrFX Admin · Widget Test (no signal, no channel publication)',origin);
+  await drfxWidgetDeliveryState(env,'probe_ok');
+ }catch(e){
+  const reason=String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,105);
+  await drfxWidgetDeliveryState(env,'probe_failed:'+reason);
+  console.warn('One-time private widget diagnostic failed: '+reason);
+ }finally{
+  await env.DB.prepare("INSERT INTO settings(key,value) VALUES('widget_probe_release',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(release).run();
+ }
+}
 const drfxApp = {
  async scheduled(controller,env){
   try{await pruneInbox(env);}catch(e){console.warn('DrFX housekeeping failed: '+String(e?.message||e).slice(0,100));}
@@ -779,25 +858,25 @@ const drfxApp = {
   try{const old=await env.DB.prepare("SELECT inbox.* FROM inbox LEFT JOIN image_edits ON image_edits.inbox_id=inbox.id WHERE inbox.file_id IS NOT NULL AND inbox.status='review' AND image_edits.inbox_id IS NULL ORDER BY inbox.id DESC LIMIT 1").first();if(old)await scanImage(env,old);}catch(e){console.warn('Image scan cron failed: '+String(e?.message||e).slice(0,120));}
   if(!env.BOT_TOKEN||!env.WEBHOOK_SECRET||!env.ADMIN_TELEGRAM_USER_ID||!env.DESTINATION_CHAT_ID)return;
   const origin=String(env.PUBLIC_URL||'https://drfx-admin.drfxai.workers.dev').replace(/\/$/,'');
-  const material=new TextEncoder().encode([env.BOT_TOKEN,env.WEBHOOK_SECRET,origin,'drfx-v0.5-native-widgets'].join('\n'));
+  const material=new TextEncoder().encode([env.BOT_TOKEN,env.WEBHOOK_SECRET,origin,'drfx-v0.6-widget-interaction-fix'].join('\n'));
   const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',material))].map(x=>x.toString(16).padStart(2,'0')).join('');
   const prior=await env.DB.prepare("SELECT value FROM settings WHERE key='telegram_setup_sha256'").first();
-  if(prior?.value===hash){
-    try{
-     const info=await tg(env,'getWebhookInfo',{});
-     if(info?.url===origin+'/telegram'&&Array.isArray(info.allowed_updates)&&info.allowed_updates.includes('widget_query'))return;
-    }catch(e){console.warn('DrFX webhook check failed: '+String(e?.message||e).slice(0,120));}
-   }
+  let needsWebhook=prior?.value!==hash;
   try{
-   const bot=await tg(env,'getMe',{});
-   if(String(bot?.username||'').toLowerCase()!=='drfxa_bot')throw Error('BOT_TOKEN mismatch: expected @Drfxa_bot, got a different bot username');
-   await tg(env,'setWebhook',{url:origin+'/telegram',secret_token:env.WEBHOOK_SECRET,allowed_updates:['message','callback_query','widget_query'],drop_pending_updates:false});
-   console.log('DrFX webhook installed for @Drfxa_bot');
-   await env.DB.prepare("INSERT INTO settings(key,value) VALUES('telegram_setup_sha256',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(hash).run();
-   console.log('DrFX Telegram webhook setup complete');
-   try{await tg(env,'setMyCommands',{commands:[{command:'start',description:'شروع و راهنمای ربات'},{command:'help',description:'راهنمای دریافت و انتشار سیگنال'},{command:'review',description:'Review the latest draft in a native widget'},{command:'widgets',description:'Open the latest review widget'}]});}catch(e){console.warn('DrFX optional commands setup failed: '+String(e?.message||e).slice(0,160));}
-   try{await tg(env,'setMenuButton',{menu_button:{type:'web_app',text:'DrFX Admin',web_app:{url:origin}}});}catch(e){console.warn('DrFX optional Mini App menu setup failed: '+String(e?.message||e).slice(0,160));}
-  }catch(e){console.warn('DrFX Telegram setup failed: '+String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,240));}
+   const info=await tg(env,'getWebhookInfo',{});
+   if(info?.url!==origin+'/telegram'||!Array.isArray(info?.allowed_updates)||!info.allowed_updates.includes('widget_query'))needsWebhook=true;
+  }catch(e){needsWebhook=true;console.warn('Widget webhook state check failed: '+String(e?.message||e).slice(0,120))}
+  if(needsWebhook){
+   try{
+    const bot=await tg(env,'getMe',{});
+    if(String(bot?.username||'').toLowerCase()!=='drfxa_bot')throw Error('BOT_TOKEN mismatch: expected @Drfxa_bot');
+    await tg(env,'setWebhook',{url:origin+'/telegram',secret_token:env.WEBHOOK_SECRET,
+     allowed_updates:['message','callback_query','widget_query'],drop_pending_updates:false});
+    await env.DB.prepare("INSERT INTO settings(key,value) VALUES('telegram_setup_sha256',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(hash).run();
+   }catch(e){console.warn('Widget webhook setup failed: '+String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,130));return}
+  }
+  await drfxEnsureWidgetMenus(env,origin);
+  await drfxWidgetOneTimeProbe(env,origin);
  },
  async fetch(req,env,ctx){
   const path=new URL(req.url).pathname;
