@@ -366,7 +366,7 @@ export function autoPhotoSignalReady(item,fresh,cfg){
  const caption=parseSignal(item.original_text),ocr=parseSignal(fresh.ocr_text);
  if(!caption||!ocr||cfg.scan_status==='approved')return false;
  if(cfg.redactions?.length||cfg.detected_labels?.some(x=>x!=='trade:unverified'))return false;
- if(/scan:partial|ocr:empty|failed|نیازمند تأیید/i.test(String(cfg.scan_note||'')))return false;
+ if(/scan:partial|ocr:empty|failed|incomplete|unavailable|نیازمند تأیید/i.test(String(cfg.scan_note||'')))return false;
  if(detectIdentifiers(item.original_text+'\n'+fresh.ocr_text,{website:CHANNEL_WEBSITE,handle:CHANNEL_HANDLE}).some(x=>!x.own))return false;
  return caption.symbol===ocr.symbol&&caption.side===ocr.side
   &&caption.entry===ocr.entry&&caption.sl===ocr.sl
