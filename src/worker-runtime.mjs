@@ -183,58 +183,79 @@ async function brandPhoto(env,fileId,settings={},item=null){
 
 
 
+function visionResponseText(output){
+ const v=output?.response??output?.choices?.[0]?.message?.content??output?.result?.response??output?.result??'';
+ if(typeof v==='string')return v.trim().slice(0,3500);
+ if(Array.isArray(v))return v.filter(x=>x?.type==='text'&&typeof x.text==='string').map(x=>x.text).join('\n').trim().slice(0,3500);
+ if(v&&typeof v.text==='string')return v.text.trim().slice(0,3500);
+ if(v&&typeof v.content==='string')return v.content.trim().slice(0,3500);
+ return '';
+}
+async function recognizeImageText(env,dataUrl){
+ const result=await env.AI.run('@cf/google/gemma-4-26b-a4b-it',{
+  messages:[{role:'user',content:[
+   {type:'text',text:'OCR: Transcribe legible text exactly as written. Include market symbol, BUY/SELL, Entry Zone, Stop Loss/SL, TP1/TP2/TP3, social @handles, web URLs, emails and phone numbers if visible. Keep line breaks. Do not calculate or invent missing values. Return only the visible text, no explanations.'},
+   {type:'image_url',image_url:{url:dataUrl}}
+  ]}],max_tokens:1100,chat_template_kwargs:{enable_thinking:false}
+ });
+ return visionResponseText(result);
+}
 async function scanImage(env,item){
- if(!env.AI||!item?.file_id)throw Error('Image AI unavailable');
+ if(!item?.file_id)throw Error('Image unavailable');
  const cfg=await imageConfig(env,item.id);
+ if(cfg.scan_status==='approved')return cfg;
+ if(!env.AI)return updateImageConfig(env,item.id,{...cfg,scan_status:'needs_review',scan_note:'سرویس OCR فعال نیست؛ تصویر را دستی بررسی کنید.'});
  try{
   const bytes=new Uint8Array(await downloadPhoto(env,item.file_id));
-  if(bytes.byteLength>3000000)throw Error('Image too large for scanning');
+  if(bytes.byteLength>3000000)throw Error('Image exceeds AI inference limit');
   let binary='';for(let i=0;i<bytes.length;i+=16384)binary+=String.fromCharCode(...bytes.subarray(i,i+16384));
   const image='data:'+imageMime(bytes)+';base64,'+btoa(binary);
   const scanSettings=await settings(env);
+  const labels=[],masks=[],failed=[];
+  let ocr='',recognizedSignal=null;
+  // OCR is available in both Balanced and Deep; photo-only signals previously
+  // remained unrecognized until manual OCR, leaving Home without levels.
+  try{
+   ocr=await recognizeImageText(env,image);
+   if(ocr){
+    recognizedSignal=parseSignal([item.original_text,ocr].filter(Boolean).join('\n'));
+    await env.DB.prepare("UPDATE inbox SET ocr_text=?,signal_json=COALESCE(signal_json,?),updated_at=unixepoch() WHERE id=? AND status IN ('review','failed') AND COALESCE(ocr_text,'')=''")
+     .bind(ocr,recognizedSignal?JSON.stringify(recognizedSignal):null,item.id).run();
+    labels.push(...detectIdentifiers(ocr,{website:CHANNEL_WEBSITE,handle:CHANNEL_HANDLE}).map(x=>'ocr:'+x.type));
+    if(recognizedSignal)labels.push('trade:unverified');
+   }else failed.push('ocr:empty');
+  }catch(e){failed.push('ocr');console.warn('Image OCR failed: '+String(e?.message||e).slice(0,140));}
+  // Balanced makes one lightweight visual detection; Deep adds two additional
+  // passes. Proposed regions remain unapproved until the admin confirms them.
   const targets=[
-   ['account','printed Telegram usernames, social media @handles and channel account labels'],
-   ['contact','website URLs, e-mail addresses, social network links or phone numbers printed in the image'],
-   ['brand','company logos, branded promotional text and watermarks']
+   ['identity','visible social @handles, Telegram usernames, website URLs, and watermark text']
   ];
   if(scanSettings.scanDepth==='deep')targets.push(
-   ['social','small social media usernames, invitation links, Telegram, X, Instagram or TikTok identifiers'],
-   ['qr','QR codes, WhatsApp contact codes and social media scannable codes']
+   ['logo','brand logos, QR codes and external channel watermarks'],
+   ['contact','email addresses, telephone numbers or small social media handles']
   );
-  const masks=[],labels=[];
-  const failed=[];
   for(const [label,target] of targets){
    try{
     const result=await env.AI.run('@cf/moondream/moondream3.1-9B-A2B',{task:'detect',image,target,max_objects:8,stream:false});
-    for(const o of (result?.objects||[])){
+    for(const o of result?.objects||[]){
      const xmin=Number(o.x_min),ymin=Number(o.y_min),xmax=Number(o.x_max),ymax=Number(o.y_max);
      if(![xmin,ymin,xmax,ymax].every(Number.isFinite)||xmin<0||ymin<0||xmax>1||ymax>1||xmin>=xmax||ymin>=ymax)continue;
-     const region={x:Math.max(0,xmin-.003),y:Math.max(0,ymin-.003),w:Math.min(1,xmax+.003)-Math.max(0,xmin-.003),h:Math.min(1,ymax+.003)-Math.max(0,ymin-.003),kind:label};
+     const x=Math.max(0,xmin-.003),y=Math.max(0,ymin-.003);
+     const region={x,y,w:Math.min(1,xmax+.003)-x,h:Math.min(1,ymax+.003)-y,kind:label};
      if(safeMasks([region]).length){masks.push(region);labels.push(label);}
     }
-   }catch(e){failed.push(label);console.warn('DrFX image target unavailable: '+label);}
+   }catch(e){failed.push(label);console.warn('Image identifier detection failed: '+label);}
   }
-  if(scanSettings.scanDepth==='deep'){
-   try{
-    const output=await env.AI.run('@cf/google/gemma-4-26b-a4b-it',{messages:[{role:'user',content:[
-      {type:'text',text:'Transcribe all legible text on the image including usernames, websites, social IDs, emails, phone numbers, entry, SL and TP. Do not guess unclear characters. Output plain text only.'},
-      {type:'image_url',image_url:{url:image}}
-    ]}],max_tokens:950,chat_template_kwargs:{enable_thinking:false}});
-    const ocr=String(output?.response||output?.result||'').slice(0,3000).trim();
-    if(ocr){
-      await env.DB.prepare("UPDATE inbox SET ocr_text=?,updated_at=unixepoch() WHERE id=? AND status IN ('review','failed')").bind(ocr,item.id).run();
-      labels.push(...detectIdentifiers(ocr,{website:CHANNEL_WEBSITE,handle:CHANNEL_HANDLE}).map(x=>'ocr:'+x.type));
-    }
-   }catch(e){failed.push('ocr');console.warn('DrFX deep OCR unavailable');}
-  }
-  const merged=safeMasks([...cfg.redactions,...masks]).filter((x,i,all)=>all.findIndex(z=>Math.abs(z.x-x.x)<.025&&Math.abs(z.y-x.y)<.025)===i).slice(0,10);
-  const note=merged.length?'شناسه، لینک یا لوگوی احتمالی شناسایی شد. ناحیه‌ها را در Visual Editor بررسی و تأیید کنید.':
-    failed.length>=targets.length?'اسکن در دسترس نبود؛ تصویر باید به‌صورت دستی بررسی شود.':
-    'شناسه‌ای شناسایی نشد؛ نبود شناسه تضمین نمی‌شود. تصویر را دستی بررسی کنید.';
-  return updateImageConfig(env,item.id,{...cfg,redactions:merged,detected_labels:[...new Set(labels)].slice(0,12),scan_status:'needs_review',scan_note:note});
+  const fresh=await imageConfig(env,item.id);
+  if(fresh.scan_status==='approved')return fresh;
+  const proposed=safeMasks([...fresh.redactions,...masks]).filter((x,i,all)=>all.findIndex(z=>Math.abs(z.x-x.x)<.025&&Math.abs(z.y-x.y)<.025)===i).slice(0,10);
+  const note=ocr?
+    (recognizedSignal?'متن و سطوح احتمالی معامله استخراج شدند؛ Entry، SL و TP را قبل از انتشار تأیید کنید.':'متن تصویر استخراج شد؛ اطلاعات سیگنال و شناسه‌ها را دستی تأیید کنید.'):
+    'OCR تصویر در دسترس نبود یا نوشته‌ها خوانا نبودند؛ بررسی دستی ضروری است.';
+  return updateImageConfig(env,item.id,{...fresh,redactions:proposed,detected_labels:[...new Set([...fresh.detected_labels,...labels])].slice(0,12),scan_status:'needs_review',scan_note:note});
  }catch(e){
-  console.warn('DrFX image detect unavailable: '+String(e?.message||e).slice(0,160));
-  return updateImageConfig(env,item.id,{...cfg,scan_status:'needs_review',scan_note:'اسکن خودکار کامل نشد؛ از برش و ماسک دستی استفاده کنید.'});
+  console.warn('Image scan unavailable: '+String(e?.message||e).slice(0,150));
+  return updateImageConfig(env,item.id,{...cfg,scan_status:'needs_review',scan_note:'اسکن انجام نشد؛ تصویر اصلی را مشاهده و دستی بازبینی کنید.'});
  }
 }
 
@@ -631,8 +652,7 @@ async function handleApi(req,env,path){
    // Gemini-4 style multimodal chat. AI inference is suggestive, never auto-published.
    const parts=[];for(let i=0;i<bytes.length;i+=0x4000)parts.push(String.fromCharCode(...bytes.subarray(i,i+0x4000)));
    const imageUrl='data:'+imageMime(bytes)+';base64,'+btoa(parts.join(''));
-   const result=await env.AI.run('@cf/google/gemma-4-26b-a4b-it',{messages:[{role:'user',content:[{type:'text',text:'OCR task: transcribe the visible trading signal text exactly, preserving all symbols, entry numbers, stop losses and take profit prices. Do not invent values. Output plain text only.'},{type:'image_url',image_url:{url:imageUrl}}]}],max_tokens:800,chat_template_kwargs:{enable_thinking:false}});
-   const ocr=String(result?.response||result?.result||'').slice(0,3500).trim();if(!ocr)throw Error('OCR returned no text');
+   const ocr=await recognizeImageText(env,imageUrl);if(!ocr)throw Error('OCR returned no text');
    const text=[row.original_text,ocr].filter(Boolean).join('\n');
    const sig=parseSignal(text);const s=await settings(env);
    const draft=fallbackDraft(text,{...s,source:row.source_label});
