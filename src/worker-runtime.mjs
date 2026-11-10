@@ -252,7 +252,7 @@ async function scanImage(env,item){
   const note=ocr?
     (recognizedSignal?'متن و سطوح احتمالی معامله استخراج شدند؛ Entry، SL و TP را قبل از انتشار تأیید کنید.':'متن تصویر استخراج شد؛ اطلاعات سیگنال و شناسه‌ها را دستی تأیید کنید.'):
     'OCR تصویر در دسترس نبود یا نوشته‌ها خوانا نبودند؛ بررسی دستی ضروری است.';
-  return updateImageConfig(env,item.id,{...fresh,redactions:proposed,detected_labels:[...new Set([...fresh.detected_labels,...labels])].slice(0,12),scan_status:'needs_review',scan_note:note});
+  return updateImageConfig(env,item.id,{...fresh,redactions:proposed,detected_labels:[...new Set([...fresh.detected_labels,...labels,...(failed.length?['scan:partial']:[])])].slice(0,12),scan_status:'needs_review',scan_note:note+(failed.length?' · Automatic verification incomplete: '+failed.join(',').slice(0,75):'')});
  }catch(e){
   console.warn('Image scan unavailable: '+String(e?.message||e).slice(0,150));
   return updateImageConfig(env,item.id,{...cfg,scan_status:'needs_review',scan_note:'اسکن انجام نشد؛ تصویر اصلی را مشاهده و دستی بازبینی کنید.'});
@@ -613,6 +613,37 @@ async function drfxWidgetQuery(q,env,ctx){
  return j({ok:true,publication_requested:true});
 }
 
+async function drfxAutoPhotoWorkflow(env,item,m,s,origin){
+ // Detached from webhook via ctx.waitUntil. Only two independently visible
+ // sources (Telegram caption and AI OCR) with exact pricing agreement qualify.
+ // Any uncertain image stays in the pending queue, not in the public channel.
+ let delivered=false,attempted=false;
+ try{
+  const scan=await scanImage(env,item);
+  const fresh=await getItem(env,String(item.id));
+  if(!fresh||fresh.status!=='review')return;
+  if(s.autoPublish&&s.strictValidation!==false&&!s.emergencyStop
+      &&autoPhotoSignalReady(item,fresh,scan)){
+   await updateImageConfig(env,item.id,{...scan,trim_top:0,trim_bottom:0,
+     scan_status:'approved',scan_note:'Auto-verified: Telegram caption and independent image OCR match all trade levels; no external identity detected.'});
+   const current=await getItem(env,String(item.id));
+   if(current?.status!=='review')return;
+   try{
+    const cleaned=new Uint8Array(await brandPhoto(env,current.file_id,s,current));
+    attempted=true;
+    const result=await publishRow(env,current,s,false,cleaned);
+    delivered=true;
+    await tg(env,'sendMessage',{chat_id:m.chat.id,text:'✅ تصویر پس از اعتبارسنجی خودکار و پاکسازی منتشر شد. شناسه پیام: '+result.message_id}).catch(()=>{});
+   }catch(e){attempted=true;console.warn('Auto photo publication needs review: '+String(e?.message||e).slice(0,140))}
+  }
+ }catch(e){console.warn('Autonomous photo analysis unavailable: '+String(e?.message||e).slice(0,130))}
+ if(delivered)return;
+ const current=await getItem(env,String(item.id));
+ if(!current||current.status!=='review')return; // A failed/uncertain send must never be retried automatically.
+ const caption=attempted?'⚠️ انتشار تصویر نامطمئن بود؛ لطفاً کانال را بررسی کنید.':'🖼️ تصویر آماده‌سازی شد؛ بررسی خودکار نتوانست صحت آن را قطعی کند.';
+ try{await drfxSendReviewWidget(env,m.chat.id,current,caption,origin)}
+ catch(e){await tg(env,'sendMessage',{chat_id:m.chat.id,text:caption,reply_markup:{inline_keyboard:[[{text:'✏️ Open Admin Mini App',web_app:{url:origin}}]]}}).catch(()=>{})}
+}
 async function handleWebhook(req,env,ctx){
  if(!env.WEBHOOK_SECRET||!safeEqual(req.headers.get('X-Telegram-Bot-Api-Secret-Token'),env.WEBHOOK_SECRET))return j({error:'unauthorized'},403);
  const u=await req.json().catch(()=>({}));
@@ -709,9 +740,14 @@ async function handleWebhook(req,env,ctx){
  if(r.meta.changes){
   await pruneInbox(env);
   const item=await env.DB.prepare("SELECT * FROM inbox WHERE origin_chat_id=? AND origin_message_id=?").bind(String(m.chat.id),m.message_id).first();
+  if(photo&&item&&s.autoPublish&&!s.emergencyStop){
+   const job=drfxAutoPhotoWorkflow(env,item,m,s,new URL(req.url).origin);
+   if(ctx?.waitUntil)ctx.waitUntil(job);else await job;
+   return j({ok:true,stored:true,auto_photo_queued:true});
+  }
   if(photo&&item){const job=scanImage(env,item);if(ctx?.waitUntil)ctx.waitUntil(job);else await job;}
   let sent=false,attempted=false;
-  if(s.autoPublish&&s.strictValidation!==false&&!s.emergencyStop&&eligibleForQuick(m,parsed,photo)&&item){
+  if(s.autoPublish&&s.strictValidation!==false&&!s.emergencyStop&&eligibleForAutoContent(m,parsed,photo)&&item){
    const duplicate=await env.DB.prepare("SELECT id FROM inbox WHERE id<>? AND source_label=? AND original_text=? AND created_at>unixepoch()-300 AND status IN ('sent','sending') LIMIT 1").bind(item.id,safeSource,original).first();
    if(!duplicate){
     attempted=true;
@@ -726,7 +762,7 @@ async function handleWebhook(req,env,ctx){
    const current=item?await getItem(env,String(item.id)):null;
    const oneTap=!!original.trim()&&!photo&&current?.status==='review';
    const kb=[];
-   if(oneTap)kb.push([{text:'🚀 انتشار با یک لمس',callback_data:'pub:'+item.id}]);
+   if(oneTap)kb.push([{text:'⚡ انتشار سریع',callback_data:'pub:'+item.id}]);
    kb.push([{text:'✏️ بررسی در پنل',web_app:{url:new URL(req.url).origin}}]);
    const msg=attempted?'⚠️ انتشار خودکار ناموفق یا نامطمئن بود. کانال را بررسی کنید.':photo?'🖼️ تصویر دریافت شد؛ برای انتشار نسخه ویرایش‌شده به Mini App بروید.':parsed?'📥 سیگنال دریافت شد.':'📥 پیام دریافت شد؛ نیاز به بررسی دارد.';
    // Optional native review card for the admin; preserve the legacy menu as fallback.
