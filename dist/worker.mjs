@@ -458,7 +458,7 @@ async function pruneInbox(env){
  * Telegram Bot API 10.4 review widget. Fixed source; per-message data is
  * provided through chat_data, never injected into executable HTML.
  */
-function drfxReviewWidgetHtml(){
+export function drfxReviewWidgetHtml(){
  return `<!doctype html><html><style>
 body{margin:0;padding:13px;font:14px system-ui,sans-serif;color:var(--tg-theme-text-color)}
 .card{border:1px solid var(--tg-theme-section-separator-color);border-radius:15px;padding:12px}
@@ -507,7 +507,7 @@ draw();
 })();
 </script></body></html>`;
 }
-function drfxReviewChatData(item){
+export function drfxReviewChatData(item){
  return JSON.stringify({id:Number(item.id),kind:item.file_id?'image':'text',status:String(item.status||'review'),text:String(item.draft_text||item.original_text||'').slice(0,300)});
 }
 async function drfxWidgetAnswer(env,id,data){
