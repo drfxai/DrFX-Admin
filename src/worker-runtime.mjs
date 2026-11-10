@@ -428,7 +428,7 @@ button:disabled{background:var(--tg-theme-secondary-bg-color);color:var(--tg-the
 <div class="content" id="content">Waiting for message data...</div>
 <div class="row"><button id="approve">Approve & Publish</button><button id="reject" class="danger">Reject</button></div>
 <div class="row"><button id="refresh" class="alt">Refresh status</button></div>
-<div class="hint" id="notice">Text posts only. Review images in Mini App.</div>
+<div class="hint" id="notice">Widget publishing requires release approval; review images in Mini App.</div>
 </div><script>
 (function(){
 var T=window.TelegramWidget,d=document,s={};
@@ -440,7 +440,7 @@ e('content').textContent=s.text||'No preview';
 e('state').textContent=s.status||'review';
 var can=s.status==='review'&&s.kind!=='image'&&s.publishEnabled===true&&!!T;
 e('approve').disabled=!can;e('reject').disabled=s.status!=='review'||!T;
-e('notice').textContent=!s.publishEnabled?'Publication from widgets is disabled until approved.':'Review carefully before publishing.';
+
 }
 function act(name){
 if(!T||!s.id)return;
