@@ -20,6 +20,7 @@ test('plain market updates publish only when categorized and free from trades an
  assert.equal(eligibleForAutoContent({text:'Market update: BUY NOW ENTRY 4075 without a stop loss',date:now()},null,null),false);
  assert.equal(eligibleForAutoContent({text:'Market update: Follow @fake_signal_room for more analysis.',date:now()},null,null),false);
  assert.equal(eligibleForAutoContent({text:'Come join our affiliate programme tomorrow.',date:now()},null,null),false);
+ assert.equal(eligibleForAutoContent({text:'Our research team has completed its monthly outlook for the gold and silver market.',forward_origin:{date:now()-45}},null,null),true);
 });
 test('auto approved photo requires caption and independent OCR to agree on each trade field',()=>{
  const signal='GOLD BUY ENTRY 4075 SL 4065 TP1 4085 TP2 4090 TP3 4100';
@@ -43,4 +44,5 @@ test('autonomous photo pipeline is task-scoped, fails closed, and never retries 
  assert.match(code,/if\(!current\|\|current\.status!=='review'\)return/);
  assert.match(code,/status:'approved'/);
  assert.match(code,/scan:partial/);
+ assert.match(code,/scanSettings\.scanDepth==='deep'\|\|scanSettings\.autoPublish===true/);
 });
