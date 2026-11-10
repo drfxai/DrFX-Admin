@@ -645,6 +645,19 @@ async function secondImageTranscription(env,item){
  // Second independent inference; equality of actual fields, not AI confidence claims.
  return recognizeImageText(env,url);
 }
+
+export function autoAnnouncementPhotoReady(item,fresh,cfg){
+ const caption=String(item?.original_text||'').trim(),ocr=String(fresh?.ocr_text||'').trim();
+ if(caption.length<35||caption.length>900||ocr.length<25)return false;
+ if(parseSignal(caption)||parseSignal(ocr))return false;
+ if(/\b(?:BUY|SELL|SL|TP[1-5]|ENTRY|LIMIT|STOP LOSS|TAKE PROFIT)\b|حد ضرر|ورود/i.test(caption+'\n'+ocr))return false;
+ if(!similarContent(caption,ocr))return false;
+ if(cfg?.detected_labels?.some(label=>!String(label).startsWith('trade:')))return false;
+ if(cfg?.redactions?.length||/failed|incomplete|unavailable|ocr:empty/i.test(cfg?.scan_note||''))return false;
+ if(detectIdentifiers(caption+'\n'+ocr,{website:CHANNEL_WEBSITE,handle:CHANNEL_HANDLE}).some(x=>!x.own))return false;
+ return true;
+}
+
 async function prepareAutonomousPhoto(env,item,s,{rescan=false}={}){
  if(!item?.file_id||item.status!=='review'||s.emergencyStop||s.strictValidation===false)return null;
  let cfg=await imageConfig(env,item.id);
@@ -657,7 +670,17 @@ async function prepareAutonomousPhoto(env,item,s,{rescan=false}={}){
  if(!fresh||fresh.status!=='review')return null;
  const fromCaption=parseSignal(item.original_text);
  const firstOcr=parseSignal(fresh.ocr_text);
- if(!firstOcr)return null;
+ if(!firstOcr){
+  if(!autoAnnouncementPhotoReady(item,fresh,cfg))return null;
+  const notice=formatChannelPost(item.original_text,s);
+  if(!notice||notice.length>1024)return null;
+  const updated=await env.DB.prepare("UPDATE inbox SET draft_text=?,updated_at=unixepoch() WHERE id=? AND status='review'")
+   .bind(notice,item.id).run();
+  if(!updated.meta.changes)return null;
+  await updateImageConfig(env,item.id,{...cfg,scan_status:'approved',
+    scan_note:'Caption cross-checked against independent image OCR. No external identifiers or trade instructions detected.'});
+  return {ready:true,photo:new Uint8Array(await brandPhoto(env,item.file_id,s,item)),mode:'auto-notice'};
+ }
  let secondOcr='';
  if(!fromCaption){
   try{secondOcr=await secondImageTranscription(env,item)}catch(e){console.warn('Second OCR unavailable: '+String(e?.message||e).slice(0,95))}
@@ -685,6 +708,11 @@ async function prepareAutonomousPhoto(env,item,s,{rescan=false}={}){
 }
 async function drfxAutoPhotoWorkflow(env,item,m,s,origin){
  let attempted=false,delivered=false;
+ const stamp=Number(m.forward_origin?.date||m.date||0);
+ if(stamp>0&&Math.abs(Date.now()/1000-stamp)>(m.forward_origin?5400:900)){
+  await drfxSendReviewWidget(env,m.chat.id,item,'⚠️ این محتوای تصویری قدیمی است؛ انتشار خودکار انجام نشد.',origin).catch(()=>{});
+  return;
+ }
  try{
   const ready=await prepareAutonomousPhoto(env,item,s,{rescan:true});
   if(ready?.ready){
@@ -715,7 +743,7 @@ async function handleWebhook(req,env,ctx){
    try{await tg(env,'answerCallbackQuery',{callback_query_id:c.id,text:'دسترسی مجاز نیست'});}catch{}
    return j({ok:true,ignored:true});
   }
-  try{await tg(env,'answerCallbackQuery',{callback_query_id:c.id,text:'در حال انتشار…'});}catch{}
+  if(k[1]==='pub')try{await tg(env,'answerCallbackQuery',{callback_query_id:c.id,text:'در حال انتشار…'});}catch{}
   const row=await getItem(env,k[2]);
   if(k[1]==='del'){
    if(!row||String(row.admin_id)!==String(c.from.id)||String(row.origin_chat_id)!==String(c.message?.chat?.id)){
@@ -728,7 +756,7 @@ async function handleWebhook(req,env,ctx){
    await tg(env,'answerCallbackQuery',{callback_query_id:c.id,text:deleted.meta.changes?'از صندوق حذف شد':'حذف نشد'}).catch(()=>{});
    return j({ok:true,deleted:Boolean(deleted.meta.changes)});
   }
-  if(!row||row.status!=='review'){
+  if(!row||String(row.admin_id)!==String(c.from.id)||String(row.origin_chat_id)!==String(c.message?.chat?.id)||row.status!=='review'){
    const message=row?.status==='sent'?'✅ این پیام قبلاً منتشر شده است. شناسه: '+String(row.destination_message_id||'ثبت‌شده'):row?'این پیام دیگر در انتظار انتشار نیست.':'این پیام از صندوق حذف شده است.';
    try{await tg(env,'sendMessage',{chat_id:c.from.id,text:message});}catch{}
    return j({ok:true,processed:true});
@@ -921,11 +949,12 @@ async function handleApi(req,env,path){
   try{
    let edited=null;
    if(row.file_id){
-    const image=await imageConfig(env,row.id);
-    if(image.scan_status!=='approved')return j({error:'Approve the cleaned image in the Mini App before fast publishing'},412);
-    edited=new Uint8Array(await brandPhoto(env,row.file_id,configuration,row));
+    const prepared=await prepareAutonomousPhoto(env,row,configuration,{rescan:false});
+    if(!prepared?.ready)return j({error:'The image could not be independently verified; edit in Pro or provide a complete caption'},412);
+    edited=prepared.photo;
    }
-   const published=await publishRow(env,row,configuration,false,edited);
+   const current=row.file_id?await getItem(env,String(row.id)):row;
+   const published=await publishRow(env,current,configuration,false,edited);
    return j({ok:true,message_id:published.message_id,item:view(await getItem(env,String(row.id)))});
   }catch(e){
    const fresh=await getItem(env,String(row.id));
