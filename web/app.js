@@ -1,3 +1,4 @@
+import {createFastMode} from './fast-pro.js';
 const telegram=window.Telegram?.WebApp;
 const demo=new URLSearchParams(location.search).get('demo')==='1'||location.protocol==='file:'||window.__DRFX_DEMO__===true;
 if(demo)document.body.classList.add('demo');
@@ -9,8 +10,13 @@ const samples=[
  {id:102,content_type:'photo',has_photo:true,source_label:'Sample Channel',original_text:'XAUUSD BUY 3880 SL 3874 TP1 3888',draft_text:'✦ DR FX AI | PREMIUM SIGNALS\n\n📈 XAUUSD  •  🟢 BUY\n📍 Entry 3880\n🛑 SL 3874\n🎯 TP1 3888\n🌐 https://drfx.company\nSource: Sample Channel',ocr_text:'',status:'sent',created_at:1730500000,signal:{symbol:'XAUUSD',side:'BUY',entry:3880,sl:3874,tps:[3888],rr:1.33}},
  {id:101,content_type:'text',has_photo:false,source_label:'Demo Feed',original_text:'Gold sell 3917 SL 3924 TP1 3909',draft_text:'✦ DR FX AI | PREMIUM SIGNALS\n\n📈 XAUUSD  •  🔴 SELL\n📍 Entry 3917\n🛑 SL 3924\n🎯 TP1 3909\n🌐 https://drfx.company\nSource: Demo Feed',ocr_text:'',status:'sent',created_at:1730499000,signal:{symbol:'XAUUSD',side:'SELL',entry:3917,sl:3924,tps:[3909],rr:1.14}}
 ];
-const state={items:[],selected:null,filter:'all',page:'dashboard',isEditing:false,settings:{brandName:'DR FX AI',website:'https://drfx.company',handle:'',watermark:true,photoMode:'watermark',autoPublish:true,authorized:false,channelConfigured:true}};
+const state={items:[],selected:null,filter:'all',page:'fast',isEditing:false,settings:{brandName:'DR FX AI',website:'https://drfx.company',handle:'',watermark:true,photoMode:'watermark',autoPublish:true,authorized:false,channelConfigured:true,scanDepth:'balanced',identityGuard:true}};
 let busy=false,toastTimer;
+const fastMode=createFastMode({
+ el,state,selected,esc,toast,isBusy:()=>busy,refresh:()=>load(),
+ goPro:(id)=>{state.selected=id;setEdit(false);page('pro');render();},
+ publish:async(id)=>{state.selected=id;setEdit(false);await mutation('publish');}
+});
 function toast(text){const e=el('toast');e.textContent=text;e.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('show'),3300);}
 function esc(text){return String(text??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');}
 function initials(item){if(item.content_type==='photo')return '▧';return item.signal?.symbol==='XAUUSD'?'🥇':item.signal?.side==='BUY'?'↗':'↘';}
@@ -280,15 +286,39 @@ function openCommandInbox(reviewOnly){
  page('inbox');render();
 }
 
-function render(){renderCommandCenter();updateTotals();renderList();renderEditor();}
-function page(name){state.page=name;for(const p of document.querySelectorAll('.page'))p.classList.toggle('active',p.id===name);for(const p of document.querySelectorAll('[data-page]'))p.classList.toggle('active',p.dataset.page===name);el('pageTitle').textContent=({dashboard:'مرکز فرمان سیگنال‌ها',inbox:'صندوق سیگنال‌ها',settings:'تنظیمات DR FX AI'})[name];el('workbench').style.display=name==='settings'?'none':'grid';el('tipline').style.display=name==='settings'?'none':'flex';if(name==='inbox')window.scrollTo({top:0,behavior:'smooth'});}
+function renderIdentityAudit(){
+ const x=selected(),container=el('identityAuditList'),info=el('identityAuditState'),note=el('identityAuditNote');
+ if(!container||!info||!note)return;
+ container.replaceChildren();
+ if(!x){info.textContent='در انتظار انتخاب';note.textContent='آیدی‌های متن و OCR در این بخش نمایش داده می‌شوند.';return;}
+ const ids=x.identifiers||[],foreign=ids.filter(v=>!v.own);
+ const scan=imageData.get(x.id);
+ info.textContent=foreign.length+' شناسه خارجی · '+ids.length+' مورد شناسایی‌شده';
+ for(const v of ids.slice(0,24)){
+  const chip=document.createElement('span');
+  chip.className='fx-identity'+(v.own?' own':'')+(v.source==='ocr'?' ocr':'');
+  chip.textContent=(v.source==='ocr'?'OCR · ':'')+v.type.toUpperCase()+': '+String(v.value||'').slice(0,110)+(v.own?' ✓':'');
+  chip.title=v.own?'شناسه رسمی برند':'شناسه خارجی، بازبینی شود';
+  container.append(chip);
+ }
+ if(x.has_photo){
+  const tags=scan?.detected_labels||[];
+  for(const label of tags.slice(0,10)){
+   const chip=document.createElement('span');chip.className='fx-identity ocr';
+   chip.textContent='IMAGE · '+label;container.append(chip);
+  }
+  note.textContent=scan?.scan_note||'در تصویر، اسکن AI ممکن است متن یا لوگو را از دست بدهد؛ تأیید تصویر قبل از انتشار ضروری است.';
+ }else note.textContent=foreign.length?'شناسه‌های خارجی در پیام اصلی پیدا شدند؛ خروجی نهایی باید پاکسازی و قبل از انتشار کنترل شود.':'شناسه خارجی شناسایی نشده است؛ تشخیص خودکار کامل و قطعی نیست.';
+}
+function render(){renderCommandCenter();updateTotals();renderList();renderEditor();renderIdentityAudit();fastMode.render();}
+function page(name){if(!['fast','pro','dashboard','inbox','settings'].includes(name))return;state.page=name;document.body.dataset.workspace=name;for(const p of document.querySelectorAll('.page'))p.classList.toggle('active',p.id===name);for(const p of document.querySelectorAll('[data-page]'))p.classList.toggle('active',p.dataset.page===name);el('pageTitle').textContent=({fast:'Fast Signal Desk',pro:'Pro Signal Studio',dashboard:'مرکز فرمان سیگنال‌ها',inbox:'صندوق سیگنال‌ها',settings:'تنظیمات DR FX AI'})[name];el('workbench').style.display=['pro','inbox'].includes(name)?'grid':'none';el('tipline').style.display=['pro','inbox'].includes(name)?'flex':'none';if(name==='pro'||name==='inbox')window.scrollTo({top:0,behavior:'smooth'});}
 async function api(path,{method='GET',body}={}){const res=await fetch(path,{method,headers:{'X-Telegram-Init-Data':telegram?.initData||'',...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});const data=await res.json().catch(()=>({error:'Invalid response'}));if(!res.ok)throw Error(data.error||'Connection failed');return data;}
 async function load(){if(demo){state.items=structuredClone(samples);state.selected=state.items[0].id;render();return;}
  if(!telegram?.initData){el('itemList').innerHTML='<div class="noitems">🔒<br>برای ورود امن، این پنل را از منوی ربات تلگرام باز کنید.<br><small>برای پیش‌نمایش ظاهری می‌توانید پارامتر ?demo=1 را به آدرس اضافه کنید.</small></div>';el('draftView').textContent='Access requires verified Telegram Mini App session.';return;}
  try{const data=await api('/api/bootstrap');const prior=state.items.find(v=>v.id===state.selected);state.items=data.items||[];state.settings=data.settings||state.settings;const current=state.items.find(v=>v.id===state.selected);if(prior&&prior.status!=='sent'&&current?.status==='sent'){state.filter='sent';document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter==='sent'));toast('✅ پیام منتشر شد.');}state.selected=state.selected&&state.items.some(x=>x.id===state.selected)?state.selected:state.items[0]?.id;syncSettings();render();}catch(e){toast('خطا: '+e.message);}}
 
 function smartSettings(overrides={}){
- return {brandName:el('brandName').value.trim(),website:el('website').value.trim(),handle:el('handle').value.trim(),watermark:state.settings.watermark,photoMode:state.settings.photoMode,autoPublish:state.settings.autoPublish,emergencyStop:state.settings.emergencyStop===true,duplicateGuard:state.settings.duplicateGuard!==false,strictValidation:state.settings.strictValidation!==false,...overrides};
+ return {brandName:el('brandName').value.trim(),website:el('website').value.trim(),handle:el('handle').value.trim(),watermark:state.settings.watermark,photoMode:state.settings.photoMode,autoPublish:state.settings.autoPublish,emergencyStop:state.settings.emergencyStop===true,duplicateGuard:state.settings.duplicateGuard!==false,strictValidation:state.settings.strictValidation!==false,identityGuard:state.settings.identityGuard!==false,scanDepth:el('scanDepth').value,...overrides};
 }
 async function updateSmartSetting(key){
  if(busy)return;
@@ -315,8 +345,8 @@ async function smartContentAction(action,data={}){
  }catch(e){toast('خطا: '+e.message);}finally{setBusy(false);renderEditor();}
 }
 
-function syncSettings(){el('brandName').value=state.settings.brandName;el('website').value=state.settings.website;el('handle').value=state.settings.handle||'';el('cardModeToggle').classList.toggle('on',state.settings.photoMode==='card');el('cardModeToggle').setAttribute('aria-pressed',String(state.settings.photoMode==='card'));el('watermarkToggle').classList.toggle('on',state.settings.watermark);el('watermarkToggle').setAttribute('aria-pressed',String(state.settings.watermark));el('autoPublishToggle').classList.toggle('on',Boolean(state.settings.autoPublish));el('autoPublishToggle').setAttribute('aria-pressed',String(Boolean(state.settings.autoPublish)));for(const [key,id] of [['emergencyStop','emergencyStopToggle'],['duplicateGuard','duplicateGuardToggle'],['strictValidation','strictValidationToggle']]){const v=key==='emergencyStop'?state.settings[key]===true:state.settings[key]!==false;el(id).classList.toggle('on',v);el(id).setAttribute('aria-pressed',String(v));}el('licenseChip').textContent=state.settings.authorized?'White-label':'Source credit';el('licenseInfo').textContent=state.settings.authorized?'مجوز اختصاصی White-label فعال است.':'نام منبع تا زمان ثبت مجوز حفظ می‌شود.';renderCommandCenter();}
-async function mutation(action,body={}){const x=selected();if(!x||busy)return;setBusy(true);try{if(demo){const a=state.items.find(v=>v.id===x.id);if(action==='edit')a.draft_text=body.text;if(action==='reject')a.status='rejected';if(action==='publish')a.status='sent';if(action==='regenerate')a.draft_text=a.draft_text.replace(/\s*$/,'');if(action==='ocr'){a.ocr_text=a.ocr_text||'XAUUSD SELL 3908 SL 3915 TP1 3903';toast('متن نمونه OCR بارگذاری شد.');}if(action==='publish')toast('فقط پیش‌نمایش: ارسال واقعی انجام نشد.');else toast('تغییر نمونه اعمال شد.');}
+function syncSettings(){el('brandName').value=state.settings.brandName;el('website').value=state.settings.website;el('handle').value=state.settings.handle||'';el('cardModeToggle').classList.toggle('on',state.settings.photoMode==='card');el('cardModeToggle').setAttribute('aria-pressed',String(state.settings.photoMode==='card'));el('watermarkToggle').classList.toggle('on',state.settings.watermark);el('watermarkToggle').setAttribute('aria-pressed',String(state.settings.watermark));el('autoPublishToggle').classList.toggle('on',Boolean(state.settings.autoPublish));el('autoPublishToggle').setAttribute('aria-pressed',String(Boolean(state.settings.autoPublish)));el('scanDepth').value=state.settings.scanDepth==='deep'?'deep':'balanced';for(const [key,id] of [['emergencyStop','emergencyStopToggle'],['duplicateGuard','duplicateGuardToggle'],['strictValidation','strictValidationToggle'],['identityGuard','identityGuardToggle']]){const v=key==='emergencyStop'?state.settings[key]===true:state.settings[key]!==false;el(id).classList.toggle('on',v);el(id).setAttribute('aria-pressed',String(v));}el('licenseChip').textContent=state.settings.authorized?'White-label':'Source credit';el('licenseInfo').textContent=state.settings.authorized?'مجوز اختصاصی White-label فعال است.':'نام منبع تا زمان ثبت مجوز حفظ می‌شود.';renderCommandCenter();}
+async function mutation(action,body={}){const x=selected();if(!x||busy)return;const wasFast=state.page==='fast';setBusy(true);try{if(demo){const a=state.items.find(v=>v.id===x.id);if(action==='edit')a.draft_text=body.text;if(action==='reject')a.status='rejected';if(action==='publish')a.status='sent';if(action==='regenerate')a.draft_text=a.draft_text.replace(/\s*$/,'');if(action==='ocr'){a.ocr_text=a.ocr_text||'XAUUSD SELL 3908 SL 3915 TP1 3903';toast('متن نمونه OCR بارگذاری شد.');}if(action==='publish')toast('فقط پیش‌نمایش: ارسال واقعی انجام نشد.');else toast('تغییر نمونه اعمال شد.');}
 
  else{
   let data;
@@ -334,15 +364,15 @@ async function mutation(action,body={}){const x=selected();if(!x||busy)return;se
   if(action==='publish'){state.filter='sent';document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter==='sent'));}toast(action==='publish'?'✅ انتشار موفق؛ پیام در بخش منتشرشده ثبت شد.':'ذخیره شد.');
  }
 
- setEdit(false);render();if(action==='publish'&&!demo){await load();page('inbox');}}catch(e){toast('خطا: '+e.message);if(action==='publish'&&!demo){try{await load();page('inbox');}catch{}}}finally{setBusy(false);renderEditor();}}
+ setEdit(false);render();if(action==='publish'&&!demo){await load();page(wasFast?'fast':'inbox');}}catch(e){toast('خطا: '+e.message);if(action==='publish'&&!demo){try{await load();page(wasFast?'fast':'inbox');}catch{}}}finally{setBusy(false);renderEditor();}}
 async function askDelete(s){if(telegram?.showConfirm)return new Promise(r=>{try{telegram.showConfirm(s,r);}catch{r(confirm(s));}});return confirm(s);}
 async function delSelected(){const x=selected();if(!x||busy||x.status==='sending')return;if(!await askDelete('پیام #'+x.id+' از صندوق حذف شود؟ این کار پیام منتشرشده در کانال را پاک نمی‌کند.'))return;setBusy(true);try{if(!demo)await api('/api/items/'+x.id,{method:'DELETE'});state.items=state.items.filter(t=>t.id!==x.id);state.selected=state.items[0]?.id??null;setEdit(false);toast('پیام حذف شد.');}catch(e){toast('خطا: '+e.message);}finally{setBusy(false);render();}}
 async function delAll(){if(!state.items.length||busy)return;if(!await askDelete('تمام پیام‌های صندوق حذف شوند؟ این کار قابل بازگشت نیست و پیام‌های کانال پاک نمی‌شوند.'))return;setBusy(true);try{if(!demo)await api('/api/items',{method:'DELETE'});state.items=[];state.selected=null;setEdit(false);toast('تمام پیام‌ها حذف شدند.');}catch(e){toast('خطا: '+e.message);}finally{setBusy(false);render();}}
 function modal(open){el('confirmModal').classList.toggle('show',open);el('confirmModal').setAttribute('aria-hidden',String(!open));}
 for(const b of document.querySelectorAll('[data-page]'))b.addEventListener('click',()=>page(b.dataset.page));for(const b of document.querySelectorAll('[data-filter]'))b.addEventListener('click',()=>{state.filter=b.dataset.filter;document.querySelectorAll('[data-filter]').forEach(x=>x.classList.toggle('active',x===b));renderList();});
 el('deleteBtn').addEventListener('click',delSelected);el('deleteAllBtn').addEventListener('click',delAll);
-for(const key of ['emergencyStop','duplicateGuard','strictValidation'])el(key+'Toggle').addEventListener('click',()=>updateSmartSetting(key));
-el('autoPublishToggle').addEventListener('click',async()=>{if(busy)return;const next=!state.settings.autoPublish;const fields={brandName:el('brandName').value.trim(),website:el('website').value.trim(),handle:el('handle').value.trim(),watermark:state.settings.watermark,photoMode:state.settings.photoMode,autoPublish:next,emergencyStop:state.settings.emergencyStop===true,duplicateGuard:state.settings.duplicateGuard!==false,strictValidation:state.settings.strictValidation!==false};if(!fields.brandName||!/^https:\/\//.test(fields.website)){toast('تنظیمات برند را اصلاح کنید.');return;}try{if(demo)state.settings.autoPublish=next;else state.settings=(await api('/api/settings',{method:'POST',body:fields})).settings;syncSettings();toast(next?'⚡ انتشار سریع فعال شد.':'انتشار سریع غیرفعال شد.');}catch(e){toast('خطا: '+e.message);}});
+for(const key of ['emergencyStop','duplicateGuard','strictValidation','identityGuard'])el(key+'Toggle').addEventListener('click',()=>updateSmartSetting(key));
+el('autoPublishToggle').addEventListener('click',async()=>{if(busy)return;const next=!state.settings.autoPublish;const fields={brandName:el('brandName').value.trim(),website:el('website').value.trim(),handle:el('handle').value.trim(),watermark:state.settings.watermark,photoMode:state.settings.photoMode,autoPublish:next,emergencyStop:state.settings.emergencyStop===true,duplicateGuard:state.settings.duplicateGuard!==false,strictValidation:state.settings.strictValidation!==false,identityGuard:state.settings.identityGuard!==false,scanDepth:el('scanDepth').value};if(!fields.brandName||!/^https:\/\//.test(fields.website)){toast('تنظیمات برند را اصلاح کنید.');return;}try{if(demo)state.settings.autoPublish=next;else state.settings=(await api('/api/settings',{method:'POST',body:fields})).settings;syncSettings();toast(next?'⚡ انتشار سریع فعال شد.':'انتشار سریع غیرفعال شد.');}catch(e){toast('خطا: '+e.message);}});
 el('cropTop').addEventListener('input',()=>cropInput('trim_top'));el('cropBottom').addEventListener('input',()=>cropInput('trim_bottom'));el('visualOverlay').addEventListener('pointerdown',visualPointerStart);el('visualOverlay').addEventListener('pointermove',visualPointerMove);el('visualOverlay').addEventListener('pointerup',visualPointerEnd);el('visualOverlay').addEventListener('pointercancel',()=>{visualState.drawing=null;renderVisualEditor();});
 el('scanImageBtn').addEventListener('click',()=>imageAction('scan'));el('saveImageBtn').addEventListener('click',()=>imageAction('save'));el('approveImageBtn').addEventListener('click',()=>imageAction('approve'));el('addMaskBtn').addEventListener('click',addMask);el('undoMaskBtn').addEventListener('click',()=>{const d=imageData.get(selected()?.id);if(d){d.redactions=(d.redactions||[]).slice(0,-1);visualInvalidate(selected(),d);}});
  el('reloadBtn').addEventListener('click',()=>load());el('tabEdit').addEventListener('click',()=>{if(!selected())return;setEdit(true);el('draftEdit').value=selected().draft_text;});el('tabPreview').addEventListener('click',()=>{if(state.isEditing && el('draftEdit').value!==selected()?.draft_text){toast('ابتدا تغییرات متن را ذخیره کنید.');return;}setEdit(false);});
@@ -354,7 +384,7 @@ el('publishBtn').addEventListener('click',()=>{if(state.isEditing){toast('اول
 el('confirmModal').addEventListener('click',e=>{if(e.target===el('confirmModal'))modal(false);});
 el('watermarkToggle').addEventListener('click',()=>{state.settings.watermark=!state.settings.watermark;syncSettings();renderEditor();});
 el('cardModeToggle').addEventListener('click',()=>{state.settings.photoMode=state.settings.photoMode==='card'?'watermark':'card';syncSettings();renderEditor();});
-el('saveSettings').addEventListener('click',async()=>{const fields={brandName:el('brandName').value.trim(),website:el('website').value.trim(),handle:el('handle').value.trim(),watermark:state.settings.watermark,photoMode:state.settings.photoMode,autoPublish:state.settings.autoPublish,emergencyStop:state.settings.emergencyStop===true,duplicateGuard:state.settings.duplicateGuard!==false,strictValidation:state.settings.strictValidation!==false};if(!fields.brandName||!/^https:\/\//.test(fields.website)){toast('نام برند و وب‌سایت HTTPS لازم هستند.');return;}
+el('saveSettings').addEventListener('click',async()=>{const fields={brandName:el('brandName').value.trim(),website:el('website').value.trim(),handle:el('handle').value.trim(),watermark:state.settings.watermark,photoMode:state.settings.photoMode,autoPublish:state.settings.autoPublish,emergencyStop:state.settings.emergencyStop===true,duplicateGuard:state.settings.duplicateGuard!==false,strictValidation:state.settings.strictValidation!==false,identityGuard:state.settings.identityGuard!==false,scanDepth:el('scanDepth').value};if(!fields.brandName||!/^https:\/\//.test(fields.website)){toast('نام برند و وب‌سایت HTTPS لازم هستند.');return;}
  try{if(demo){Object.assign(state.settings,fields);toast('تنظیمات نمایشی ذخیره شد.');}else{const r=await api('/api/settings',{method:'POST',body:fields});state.settings=r.settings;toast('تنظیمات برند ذخیره شد.');}syncSettings();renderEditor();}catch(e){toast('خطا: '+e.message);}});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!busy&&!state.isEditing)load();});window.addEventListener('focus',()=>{if(!busy&&!state.isEditing)load();});setInterval(()=>{if(!document.hidden&&!busy&&!state.isEditing&&!demo)load();},30000);
 el('recoveryRefresh').addEventListener('click',()=>load());el('recoveryPrepare').addEventListener('click',recoverCurrentPost);
@@ -364,4 +394,4 @@ el('dashGoInbox').addEventListener('click',()=>openCommandInbox(false));
 el('dashGoSettings').addEventListener('click',()=>page('settings'));
 el('dashPause').addEventListener('click',()=>updateSmartSetting('emergencyStop'));
 el('dashOpenLatest').addEventListener('click',()=>{const x=state.items[0];if(!x)return;state.selected=x.id;openCommandInbox(false);if(window.innerWidth<700)el('previewBox').scrollIntoView({behavior:'smooth',block:'start'});});
-syncSettings();load();
+fastMode.init();page('fast');syncSettings();load();
