@@ -404,9 +404,121 @@ async function pruneInbox(env){
  ]);
 }
 
+
+/**
+ * Telegram Bot API 10.4 review widget. Fixed source; per-message data is
+ * provided through chat_data, never injected into executable HTML.
+ */
+function drfxReviewWidgetHtml(){
+ return `<!doctype html><html><style>
+body{margin:0;padding:13px;font:14px system-ui,sans-serif;color:var(--tg-theme-text-color)}
+.card{border:1px solid var(--tg-theme-section-separator-color);border-radius:15px;padding:12px}
+.head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+h3{font-size:1.05em;margin:0}.hint{color:var(--tg-theme-hint-color);font-size:.84em}
+.tag{color:var(--tg-theme-accent-text-color);font-weight:700}
+.content{white-space:pre-wrap;overflow-wrap:anywhere;max-height:100px;overflow:hidden;margin:12px 0;padding:10px;border-radius:9px;background:var(--tg-theme-secondary-bg-color)}
+.row{display:flex;gap:8px;margin-top:9px}button{flex:1;padding:10px 5px;border:0;border-radius:9px;font-weight:700;background:var(--tg-theme-button-color);color:var(--tg-theme-button-text-color)}
+button.alt{background:var(--tg-theme-secondary-bg-color);color:var(--tg-theme-text-color)}
+button.danger{background:var(--tg-theme-destructive-text-color);color:#fff}
+button:disabled{background:var(--tg-theme-secondary-bg-color);color:var(--tg-theme-hint-color)}
+#notice{min-height:17px;margin-top:9px}small{font-size:.8em}
+</style><body><div class="card">
+<div class="head"><h3>✦ DrFX Admin</h3><span class="tag" id="state">Review</span></div>
+<div class="hint" id="ref">Admin-only review</div>
+<div class="content" id="content">Waiting for message data...</div>
+<div class="row"><button id="approve">Approve & Publish</button><button id="reject" class="danger">Reject</button></div>
+<div class="row"><button id="refresh" class="alt">Refresh status</button></div>
+<div class="hint" id="notice">Text posts only. Review images in Mini App.</div>
+</div><script>
+(function(){
+var T=window.TelegramWidget,d=document,s={};
+try{s=JSON.parse(T&&T.chatData||'{}')}catch(e){}
+function e(id){return d.getElementById(id)}
+function draw(){
+e('ref').textContent='#'+(s.id||'?')+' · '+(s.kind==='image'?'Photo (Mini App required)':'Text signal');
+e('content').textContent=s.text||'No preview';
+e('state').textContent=s.status||'review';
+var can=s.status==='review'&&s.kind!=='image'&&!!T;
+e('approve').disabled=!can;e('reject').disabled=s.status!=='review'||!T;
+}
+function act(name){
+if(!T||!s.id)return;
+e('notice').textContent='Sending request...';
+T.request('drfx:'+name+':'+s.id).then(function(r){
+var a={};try{a=JSON.parse(r.result||'{}')}catch(e){}
+if(a.status)s.status=a.status;
+e('notice').textContent=a.message||'Request received';draw();
+},function(err){e('notice').textContent='Request failed: '+(err.code||'FAILED')});
+}
+e('approve').onclick=function(){act('publish')};
+e('reject').onclick=function(){act('reject')};
+e('refresh').onclick=function(){act('status')};
+if(T)T.onEvent('chatDataChanged',function(){try{s=JSON.parse(T.chatData||'{}');draw()}catch(e){}});
+draw();
+})();
+</script></body></html>`;
+}
+function drfxReviewChatData(item){
+ return JSON.stringify({id:Number(item.id),kind:item.file_id?'image':'text',status:String(item.status||'review'),text:String(item.draft_text||item.original_text||'').slice(0,300)});
+}
+async function drfxWidgetAnswer(env,id,data){
+ try{await tg(env,'answerWidgetQuery',{widget_query_id:id,data:JSON.stringify(data)});}
+ catch(e){console.warn('Widget answer failed: '+String(e?.message||e).slice(0,100));}
+}
+async function drfxWidgetUpdate(env,q,item){
+ if(!q.message_id||!q.chat?.id||!item)return;
+ try{await tg(env,'editMessageWidgetData',{chat_id:q.chat.id,message_id:q.message_id,chat_data:drfxReviewChatData(item)});}
+ catch(e){console.warn('Widget state update failed: '+String(e?.message||e).slice(0,100));}
+}
+async function drfxWidgetQuery(q,env,ctx){
+ if(!q?.id)return j({ok:true,ignored:true});
+ const ok=q.chat?.type==='private'&&String(q.from?.id)===String(env.ADMIN_TELEGRAM_USER_ID)&&String(q.chat?.id)===String(q.from?.id)&&Number.isSafeInteger(Number(q.message_id))&&!q.inline_message_id;
+ const m=/^drfx:(status|publish|reject):([1-9]\d{0,10})$/.exec(String(q.data||''));
+ if(!ok||!m){await drfxWidgetAnswer(env,q.id,{message:'Not authorized'});return j({ok:true,denied:true});}
+ const row=await getItem(env,m[2]);
+ if(!row||String(row.admin_id)!==String(q.from.id)||String(row.origin_chat_id)!==String(q.chat.id)){
+  await drfxWidgetAnswer(env,q.id,{message:'Message unavailable'});return j({ok:true,denied:true});
+ }
+ const action=m[1];
+ if(action==='status'){
+  await drfxWidgetAnswer(env,q.id,{status:row.status,message:row.status==='sent'?'Published':'Current status: '+row.status});
+  await drfxWidgetUpdate(env,q,row);
+  return j({ok:true,status:row.status});
+ }
+ if(row.status!=='review'){
+  await drfxWidgetAnswer(env,q.id,{status:row.status,message:'No longer awaiting review'});
+  await drfxWidgetUpdate(env,q,row);return j({ok:true,unchanged:true});
+ }
+ if(action==='reject'){
+  await env.DB.prepare("UPDATE inbox SET status='rejected',updated_at=unixepoch() WHERE id=? AND admin_id=? AND status='review'").bind(row.id,String(q.from.id)).run();
+  const fresh=await getItem(env,String(row.id));
+  await drfxWidgetAnswer(env,q.id,{status:fresh.status,message:fresh.status==='rejected'?'Rejected':'Status changed'});
+  await drfxWidgetUpdate(env,q,fresh);return j({ok:true,status:fresh.status});
+ }
+ if(row.file_id){
+  await drfxWidgetAnswer(env,q.id,{status:'review',message:'Review edited image in the Mini App'});
+  return j({ok:true,image_review:true});
+ }
+ // Explicit opt-in: no live publication from widgets until owner enables it.
+ if(env.DRFX_WIDGET_PUBLISH_ENABLED!=='true'){
+  await drfxWidgetAnswer(env,q.id,{status:'review',message:'Widget publication is disabled until release approval'});
+  return j({ok:true,feature_disabled:true});
+ }
+ await drfxWidgetAnswer(env,q.id,{status:'review',message:'Publication requested. Use Refresh status to verify delivery.'});
+ const job=(async()=>{
+  try{await publishRow(env,row,await settings(env));}
+  catch(e){console.warn('Widget publish needs review: '+String(e?.message||e).slice(0,140));}
+  const fresh=await getItem(env,String(row.id));
+  await drfxWidgetUpdate(env,q,fresh);
+ })();
+ if(ctx?.waitUntil)ctx.waitUntil(job);else await job;
+ return j({ok:true,publication_requested:true});
+}
+
 async function handleWebhook(req,env,ctx){
  if(!env.WEBHOOK_SECRET||!safeEqual(req.headers.get('X-Telegram-Bot-Api-Secret-Token'),env.WEBHOOK_SECRET))return j({error:'unauthorized'},403);
  const u=await req.json().catch(()=>({}));
+ if(u.widget_query)return drfxWidgetQuery(u.widget_query,env,ctx);
  if(u.callback_query){
   const c=u.callback_query,k=String(c.data||'').match(/^pub:(\d+)$/);
   if(!k||String(c.from?.id)!==String(env.ADMIN_TELEGRAM_USER_ID)||c.message?.chat?.type!=='private'){
@@ -446,6 +558,13 @@ async function handleWebhook(req,env,ctx){
   return j({ok:true});
  }
  const command=String(m.text||'').trim().toLowerCase();
+ if(/^\/(?:review|widgets)(?:@\w+)?$/.test(command)){
+  const row=await env.DB.prepare("SELECT * FROM inbox WHERE admin_id=? AND status='review' ORDER BY id DESC LIMIT 1").bind(String(m.from.id)).first();
+  if(!row){await tg(env,'sendMessage',{chat_id:m.chat.id,text:'✅ No pending review items.'});return j({ok:true,empty:true});}
+  await tg(env,'sendWidget',{chat_id:m.chat.id,html:drfxReviewWidgetHtml(),chat_data:drfxReviewChatData(row),allow_queries:true,height:320,caption:'DrFX Admin · Review #'+row.id+' (private admin chat only)'});
+  return j({ok:true,widget_sent:true});
+ }
+
  if(/^\/(pause|resume|status)(?:@\w+)?$/.test(command)){
   const op=command.split('@')[0];
   if(op==='/pause'||op==='/resume')await env.DB.prepare("INSERT INTO settings(key,value) VALUES('emergencyStop',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(op==='/pause'?'true':'false').run();
@@ -678,18 +797,18 @@ const drfxApp = {
   try{const old=await env.DB.prepare("SELECT inbox.* FROM inbox LEFT JOIN image_edits ON image_edits.inbox_id=inbox.id WHERE inbox.file_id IS NOT NULL AND inbox.status='review' AND image_edits.inbox_id IS NULL ORDER BY inbox.id DESC LIMIT 1").first();if(old)await scanImage(env,old);}catch(e){console.warn('Image scan cron failed: '+String(e?.message||e).slice(0,120));}
   if(!env.BOT_TOKEN||!env.WEBHOOK_SECRET||!env.ADMIN_TELEGRAM_USER_ID||!env.DESTINATION_CHAT_ID)return;
   const origin=String(env.PUBLIC_URL||'https://drfx-admin.drfxai.workers.dev').replace(/\/$/,'');
-  const material=new TextEncoder().encode([env.BOT_TOKEN,env.WEBHOOK_SECRET,origin,'drfx-v0.3-fast-publish'].join('\n'));
+  const material=new TextEncoder().encode([env.BOT_TOKEN,env.WEBHOOK_SECRET,origin,'drfx-v0.4-native-widgets'].join('\n'));
   const hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',material))].map(x=>x.toString(16).padStart(2,'0')).join('');
   const prior=await env.DB.prepare("SELECT value FROM settings WHERE key='telegram_setup_sha256'").first();
   if(prior?.value===hash)return;
   try{
    const bot=await tg(env,'getMe',{});
    if(String(bot?.username||'').toLowerCase()!=='drfxa_bot')throw Error('BOT_TOKEN mismatch: expected @Drfxa_bot, got a different bot username');
-   await tg(env,'setWebhook',{url:origin+'/telegram',secret_token:env.WEBHOOK_SECRET,allowed_updates:['message','callback_query'],drop_pending_updates:false});
+   await tg(env,'setWebhook',{url:origin+'/telegram',secret_token:env.WEBHOOK_SECRET,allowed_updates:['message','callback_query','widget_query'],drop_pending_updates:false});
    console.log('DrFX webhook installed for @Drfxa_bot');
    await env.DB.prepare("INSERT INTO settings(key,value) VALUES('telegram_setup_sha256',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value").bind(hash).run();
    console.log('DrFX Telegram webhook setup complete');
-   try{await tg(env,'setMyCommands',{commands:[{command:'start',description:'شروع و راهنمای ربات'},{command:'help',description:'راهنمای دریافت و انتشار سیگنال'}]});}catch(e){console.warn('DrFX optional commands setup failed: '+String(e?.message||e).slice(0,160));}
+   try{await tg(env,'setMyCommands',{commands:[{command:'start',description:'شروع و راهنمای ربات'},{command:'help',description:'راهنمای دریافت و انتشار سیگنال'},{command:'review',description:'Review latest pending signal in a Telegram widget'}]});}catch(e){console.warn('DrFX optional commands setup failed: '+String(e?.message||e).slice(0,160));}
    try{await tg(env,'setMenuButton',{menu_button:{type:'web_app',text:'DrFX Admin',web_app:{url:origin}}});}catch(e){console.warn('DrFX optional Mini App menu setup failed: '+String(e?.message||e).slice(0,160));}
   }catch(e){console.warn('DrFX Telegram setup failed: '+String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,240));}
  },
