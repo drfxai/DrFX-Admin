@@ -98,3 +98,31 @@ test('admin action stays usable while publication is deliberately disabled',()=>
  assert.match(source,/status:'demo'/);
  assert.match(source,/widget_probe_release/);
 });
+
+test('Telegram private photo widget embeds only compact data JPEGs and safely falls back',()=>{
+ const html=drfxReviewWidgetHtml();
+ assert.match(html,/id="photoPreview"/);
+ assert.match(source,/async function drfxBuildReviewWidgetHtml/);
+ assert.match(source,/data:image\/jpeg;base64,/);
+ assert.match(source,/new CompressionStream\('deflate'\)/);
+ assert.match(source,/compressed.byteLength>4096/);
+ assert.match(source,/new TextEncoder\(\)\.encode\(html\)\.length>32768/);
+ assert.match(source,/await tg\(env,'sendPhoto',\{chat_id:chatId,photo:item.file_id/);
+ assert.match(source,/await drfxBuildReviewWidgetHtml\(env,item\)/);
+ assert.ok(Buffer.byteLength(html,'utf8')<=32768);
+ assert.ok(deflateSync(Buffer.from(html),{level:9}).byteLength<=4096);
+});
+
+test('widget fast publication is enabled only for owner-reviewed content',()=>{
+ const text=JSON.parse(drfxReviewChatData({id:22,status:'review',draft_text:'XAUUSD BUY SL 10',file_id:null},true));
+ const unapproved=JSON.parse(drfxReviewChatData({id:23,status:'review',file_id:'photo'},true));
+ const approved=JSON.parse(drfxReviewChatData({id:23,status:'review',file_id:'photo'},true,true));
+ assert.equal(text.quickReady,true);
+ assert.equal(unapproved.quickReady,false);
+ assert.equal(approved.quickReady,true);
+ assert.match(source,/scan_status!=='approved'/);
+ assert.match(source,/new Uint8Array\(await brandPhoto/);
+ assert.match(source,/await publishRow\(env,row,currentSettings,false,cleaned\)/);
+ assert.match(source,/quick-publish'&&method==='POST'/);
+ assert.match(source,/if\(configuration.emergencyStop\)/);
+});
