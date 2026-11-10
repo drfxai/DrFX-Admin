@@ -412,7 +412,7 @@ async function pruneInbox(env){
 export function drfxReviewWidgetHtml(){
  return "<!doctype html><html><style>\n*{box-sizing:border-box}body{margin:0;padding:0;font:13px system-ui,sans-serif;color:#eaf5ff;background:#061522}\n.shell{padding:13px;border-radius:18px;border:1px solid #1a7386;background:radial-gradient(ellipse at 95% 0%,#073e51,transparent 49%),linear-gradient(145deg,#071c2e,#06101d 72%);box-shadow:inset 0 0 0 1px #16435b,0 0 16px #083e53;overflow:hidden}\n.top,.line,.buttons,.hero,.flow,.levels,.foot{display:flex;align-items:center;justify-content:space-between;gap:8px}\n.logo{font-size:20px;font-weight:900;letter-spacing:-.7px}.logo i{font-style:normal;color:#35e5cd}.sub{font-size:9px;color:#9bb6c8;letter-spacing:1.7px}.mark{font-weight:800;font-size:9px;border:1px solid #4eddb6;color:#63edd2;border-radius:15px;padding:5px 9px;background:#063b3a}\n.flow{margin:11px 0;padding:8px 11px;border:1px solid #214659;border-radius:11px;background:#10283d;font-size:10px;color:#9fbad2}.flow b{color:#6cf3dd}.flow span{color:#34bfce}\n.box{border:1px solid #28566b;border-radius:14px;padding:11px;background:linear-gradient(120deg,#0c2639,#081725)}\n.line{font-size:11px;color:#b3cede}.count{color:#5ae7ee;font-weight:800}.pending{color:#ffe1a0;border:1px solid #ab8147;background:#3d2c15;border-radius:13px;padding:4px 8px;font-size:10px}\n.hero{margin:11px 0 8px}.asset{font-size:22px;font-weight:900;letter-spacing:.5px}.side{border:1px solid #25d7ad;background:#053a33;color:#75ffe2;border-radius:8px;padding:5px 11px;font-size:14px;font-weight:900}.side.sell{color:#ffacb6;border-color:#d15b6c;background:#3d1725}\n.snapshot{font:11px/1.45 system-ui,sans-serif;color:#b7d1e0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:46px;overflow:hidden;margin:7px 0;padding:8px;border-radius:8px;background:#10283a}\n.levels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:8px}\n.level{border:1px solid #214457;background:#10283a;border-radius:8px;padding:7px 8px}.level small{display:block;color:#86a9bc;font-size:9px}.level b{display:block;color:#e7f4ff;font-size:12px;font-variant-numeric:tabular-nums}.level.loss b{color:#ff879b}.level.profit b{color:#63ecd1}\n.photo-preview:empty{display:none}.photo-preview{margin:8px 0 10px;border-radius:10px;border:1px solid #367b87;overflow:hidden;background:#102537}.photo-preview img{display:block;width:100%;height:auto;max-height:136px;object-fit:contain}.photo-preview small{display:block;padding:5px 8px;font-size:9px;color:#98c7cb}.stats{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}.chip{font-size:9px;border:1px solid #236a68;color:#7fead7;border-radius:13px;padding:4px 8px;background:#0a3134}.chip.neutral{color:#a7c4db;border-color:#36516e}\n.buttons{margin-top:11px}button{font:700 11px system-ui,sans-serif;border-radius:10px;padding:11px 4px;border:1px solid #306579;background:#132f45;color:#d9f4ff;flex:1;min-width:0}\nbutton.main{background:linear-gradient(115deg,#0e806c,#0b5989);border-color:#45d9d0;color:#fff;box-shadow:0 0 12px #075e65}\nbutton.danger{background:#311d2e;border-color:#9e4c68;color:#ffbdc4}button:disabled{opacity:.43}\n.foot{font-size:9px;margin-top:10px;color:#88a5bd}.status{color:#cbe4f4;min-height:13px;margin-top:7px;font-size:10px}\n@media(prefers-color-scheme:light){body{background:#eaf4f6}.shell{background:linear-gradient(140deg,#0b293f,#092037)}}\n@media(prefers-reduced-motion:no-preference){.mark{animation:pulse 2.8s ease-in-out infinite}@keyframes pulse{50%{box-shadow:0 0 9px #187d73}}}\n</style><body><div class=\"shell\">\n<div class=\"top\"><div><div class=\"logo\">DrFX<i>Ai</i> <span style=\"font-weight:400\">| Admin</span></div><div class=\"sub\">SIGNAL CONTENT COMMAND</div></div><div class=\"mark\">● PRIVATE</div></div>\n<div class=\"flow\"><span>01 RECEIVE</span><span>→</span><b>02 REVIEW</b><span>→</span><span>03 PUBLISH</span></div>\n<div class=\"box\"><div class=\"line\"><b>↗ Forwarded Signal</b><span class=\"count\" id=\"ref\">#—</span></div>\n<div class=\"line\" style=\"margin-top:9px\"><span class=\"pending\" id=\"state\">PENDING REVIEW</span><span id=\"kind\">TEXT</span></div>\n<div class=\"hero\"><div class=\"asset\" id=\"symbol\">SIGNAL REVIEW</div><div class=\"side\" id=\"side\">DRAFT</div></div>\n<div class=\"photo-preview\" id=\"photoPreview\"></div><div class=\"snapshot\" id=\"content\">Preview loading…</div>\n<div class=\"levels\" id=\"levels\"><div class=\"level\"><small>ENTRY</small><b id=\"entry\">—</b></div><div class=\"level loss\"><small>STOP LOSS</small><b id=\"sl\">—</b></div><div class=\"level profit\"><small>TARGET 1</small><b id=\"tp1\">—</b></div><div class=\"level profit\"><small>TARGET 2 / 3</small><b id=\"tp23\">—</b></div></div>\n<div class=\"stats\"><span class=\"chip\" id=\"verified\">UNVERIFIED DRAFT</span><span class=\"chip neutral\">ADMIN ONLY</span></div></div>\n<div class=\"buttons\"><button id=\"reject\" class=\"danger\">✕ Reject</button><button id=\"refresh\">↻ Status</button></div><div class=\"buttons\"><button id=\"edit\">✎ Edit</button><button class=\"main\" id=\"approve\">⚡ Quick Publish</button></div>\n<div class=\"buttons\" id=\"publishArea\" hidden><button class=\"main\" id=\"publish\">↗ Confirm &amp; Publish</button><button id=\"cancel\">Cancel</button></div>\n<div id=\"notice\" class=\"status\">Review values before any publication.</div>\n<div class=\"foot\"><span>DR FX AI · CONTROLLED PUBLISH</span><span>FAST · VERIFIED ONLY</span></div></div>\n<script>\n(function(){\nvar T=window.TelegramWidget,d=document,s={},armed=false;\ntry{s=JSON.parse(T&&T.chatData||'{}')}catch(x){}\nfunction e(k){return d.getElementById(k)}\nfunction txt(k,v){e(k).textContent=v===null||v===undefined||v===''?'—':String(v)}\nfunction draw(){\ntxt('ref','#'+(s.id||'?'));txt('state',String(s.status||'review').toUpperCase());\ntxt('kind',s.kind==='image'?'PHOTO · MINI APP':'TEXT SIGNAL');\ntxt('content',s.text||'No preview available');txt('symbol',s.signal&&s.signal.symbol||'SIGNAL REVIEW');\ntxt('side',s.signal&&s.signal.side||'DRAFT');\ne('side').className='side'+(s.signal&&s.signal.side==='SELL'?' sell':'');\ntxt('entry',s.signal&&(s.signal.zone||s.signal.entry));txt('sl',s.signal&&s.signal.sl);\nvar v=s.signal&&s.signal.tps||[];txt('tp1',v[0]);txt('tp23',[v[1],v[2]].filter(function(x){return x!==null&&x!==undefined}).join(' / '));\ntxt('verified',s.signal?'PARSED · CHECK PRICES':'REVIEW REQUIRED');\ne('approve').disabled=!T||s.status!=='review';\ntxt('approve',s.quickReady===true&&s.publishEnabled===true?'⚡ Quick Publish':'↗ Review in Admin');\ne('reject').disabled=!T||s.status!=='review';\ne('publishArea').hidden=!armed||s.status!=='review';\n}\nfunction act(op){\nif(!T||!s.id)return;\ntxt('notice','Processing…');\ntry{T.request('drfx:'+op+':'+s.id).then(function(r){\nvar a={};try{a=JSON.parse(r.result||'{}')}catch(x){}\nif(a.status)s.status=a.status;armed=false;draw();txt('notice',a.message||'Status refreshed');\n},function(x){txt('notice','Request failed: '+(x.code||'FAILED'))})}\ncatch(x){txt('notice','Request unavailable: '+(x.code||'TRY AGAIN'))}\n}\nfunction openAdmin(){if(T&&T.openTelegramLink)T.openTelegramLink('https://t.me/drfxa_bot?startapp=review');else txt('notice','Open the Admin Mini App from the button below the card')}\ne('approve').onclick=function(){if(s.publishEnabled!==true||s.quickReady!==true){openAdmin();return}armed=true;draw();txt('notice','Confirm one-tap publication to DR FX AI')};\ne('refresh').onclick=function(){act('status')};\ne('publish').onclick=function(){act('publish')};\ne('cancel').onclick=function(){armed=false;draw()};\ne('reject').onclick=function(){act('reject')};\ne('edit').onclick=openAdmin;\nif(T)T.onEvent('chatDataChanged',function(){try{s=JSON.parse(T.chatData||'{}');armed=false;draw()}catch(x){}});\ndraw();if(T&&T.ready)T.ready();\n})();\n</script></body></html>";
 }
-export function drfxReviewChatData(item,publishEnabled=false){
+export function drfxReviewChatData(item,publishEnabled=false,quickReady=!item?.file_id){
  // Never inject user content into widget HTML; keep the entire state under Telegram's 1024-byte limit.
  const sig=(()=>{try{return item.signal_json?JSON.parse(item.signal_json):null}catch{return null}})();
  const safe=sig&&['BUY','SELL'].includes(sig.side)&&/^[A-Z0-9._-]{1,32}$/.test(String(sig.symbol||''))
@@ -420,12 +420,35 @@ export function drfxReviewChatData(item,publishEnabled=false){
      zone:typeof sig.entryZone==='string'?sig.entryZone.slice(0,50):null,
      sl:Number.isFinite(sig.sl)?sig.sl:null,
      tps:Array.isArray(sig.tps)?sig.tps.filter(Number.isFinite).slice(0,3):[]} :null;
- const state={id:Number(item.id),kind:item.file_id?'image':'text',status:String(item.status||'review').slice(0,24),publishEnabled:publishEnabled===true,signal:safe,text:''};
+ const state={id:Number(item.id),kind:item.file_id?'image':'text',status:String(item.status||'review').slice(0,24),publishEnabled:publishEnabled===true,quickReady:quickReady===true,signal:safe,text:''};
  const chars=Array.from(String(item.draft_text||item.original_text||'')).slice(0,300);
  const encoder=new TextEncoder();let low=0,high=chars.length;
  while(low<high){const mid=Math.ceil((low+high)/2);state.text=chars.slice(0,mid).join('');
   if(encoder.encode(JSON.stringify(state)).byteLength<=1024)low=mid;else high=mid-1;}
  state.text=chars.slice(0,low).join('');return JSON.stringify(state);
+}
+async function drfxBuildReviewWidgetHtml(env,item){
+ const base=drfxReviewWidgetHtml();
+ if(!item?.file_id||!env.IMAGES)return {html:base,embedded:false};
+ try{
+  const input=new Uint8Array(await downloadPhoto(env,item.file_id));
+  for(const size of [148,112,82]){
+   const result=await env.IMAGES.input(input).transform({width:size,height:100,fit:'contain'})
+    .output({format:'image/jpeg',quality:size===148?28:20});
+   const response=result.response();
+   if(!response.ok)continue;
+   const bytes=new Uint8Array(await response.arrayBuffer());
+   if(bytes.length>3800||bytes.length<50)continue;
+   let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode(...bytes.subarray(i,i+8192));
+   const preview='<img src="data:image/jpeg;base64,'+btoa(binary)+'" alt="Original photo thumbnail"/><small>PRIVATE PREVIEW · OPEN MINI APP FOR FULL IMAGE</small>';
+   const html=base.replace('<div class="photo-preview" id="photoPreview"></div>','<div class="photo-preview" id="photoPreview">'+preview+'</div>');
+   if(new TextEncoder().encode(html).length>32768)continue;
+   const compressed=await new Response(new Blob([html]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer();
+   if(compressed.byteLength>4096)continue;
+   return {html,embedded:true};
+  }
+ }catch(e){console.warn('Private widget thumbnail unavailable: '+String(e?.message||e).slice(0,100))}
+ return {html:base,embedded:false};
 }
 async function drfxWidgetDeliveryState(env,state){
  // Diagnostics are message-free; never store a token, Telegram identity or signal content.
@@ -433,13 +456,21 @@ async function drfxWidgetDeliveryState(env,state){
 }
 async function drfxSendReviewWidget(env,chatId,item,caption,origin){
  const appUrl=String(env.PUBLIC_URL||origin||'https://drfx-admin.drfxai.workers.dev').replace(/\/$/,'');
- const payload={chat_id:chatId,html:drfxReviewWidgetHtml(),
-  chat_data:drfxReviewChatData(item,env.DRFX_WIDGET_PUBLISH_ENABLED==='true'),
+ const preview=await drfxBuildReviewWidgetHtml(env,item);
+ const approved=!!item?.file_id&&(await imageConfig(env,item.id)).scan_status==='approved';
+ const payload={chat_id:chatId,html:preview.html,
+  chat_data:drfxReviewChatData(item,env.DRFX_WIDGET_PUBLISH_ENABLED==='true',!item.file_id||approved),
   allow_queries:true,protect_content:true,caption,
   reply_markup:{inline_keyboard:[[{text:'✎ Open Admin Mini App',web_app:{url:appUrl}}]]}};
  try{
   const delivered=await tg(env,'sendWidget',payload);
-  await drfxWidgetDeliveryState(env,'ok');
+  await drfxWidgetDeliveryState(env,preview.embedded?'ok:photo_embedded':'ok');
+  if(item.file_id&&!preview.embedded){
+   // Telegram widgets cannot fetch network images. Send original privately if the
+   // compressed inline thumbnail cannot fit. Never send this to a channel.
+   try{await tg(env,'sendPhoto',{chat_id:chatId,photo:item.file_id,caption:'🖼️ Private preview #'+item.id+' · Open Admin to approve and publish',reply_markup:payload.reply_markup});}
+   catch(e){console.warn('Private image fallback unavailable: '+String(e?.message||e).slice(0,95))}
+  }
   return delivered;
  }catch(e){
   const description=String(e?.message||e).replace(/\d{7,}:[A-Za-z0-9_-]{20,}/g,'[REDACTED]').slice(0,120);
@@ -453,7 +484,8 @@ async function drfxWidgetAnswer(env,id,data){
 }
 async function drfxWidgetUpdate(env,q,item){
  if(!q.message_id||!q.chat?.id||!item)return;
- try{await tg(env,'editMessageWidgetData',{chat_id:q.chat.id,message_id:q.message_id,chat_data:drfxReviewChatData(item,env.DRFX_WIDGET_PUBLISH_ENABLED==='true')});}
+ try{const approved=!item.file_id||(await imageConfig(env,item.id)).scan_status==='approved';
+  await tg(env,'editMessageWidgetData',{chat_id:q.chat.id,message_id:q.message_id,chat_data:drfxReviewChatData(item,env.DRFX_WIDGET_PUBLISH_ENABLED==='true',approved)});}
  catch(e){console.warn('Widget state update failed: '+String(e?.message||e).slice(0,100));}
 }
 async function drfxWidgetQuery(q,env,ctx){
@@ -481,8 +513,8 @@ async function drfxWidgetQuery(q,env,ctx){
   await drfxWidgetAnswer(env,q.id,{status:fresh.status,message:fresh.status==='rejected'?'Rejected':'Status changed'});
   await drfxWidgetUpdate(env,q,fresh);return j({ok:true,status:fresh.status});
  }
- if(row.file_id){
-  await drfxWidgetAnswer(env,q.id,{status:'review',message:'Review edited image in the Mini App'});
+ if(row.file_id&&(await imageConfig(env,row.id)).scan_status!=='approved'){
+  await drfxWidgetAnswer(env,q.id,{status:'review',message:'Please approve the cleaned image in Mini App first'});
   return j({ok:true,image_review:true});
  }
  // Explicit opt-in: no live publication from widgets until owner enables it.
@@ -492,8 +524,13 @@ async function drfxWidgetQuery(q,env,ctx){
  }
  await drfxWidgetAnswer(env,q.id,{status:'review',message:'Publication requested. Use Refresh status to verify delivery.'});
  const job=(async()=>{
-  try{await publishRow(env,row,await settings(env));}
-  catch(e){console.warn('Widget publish needs review: '+String(e?.message||e).slice(0,140));}
+  try{
+    const currentSettings=await settings(env);
+    if(row.file_id){
+     const cleaned=new Uint8Array(await brandPhoto(env,row.file_id,currentSettings,row));
+     await publishRow(env,row,currentSettings,false,cleaned);
+    }else await publishRow(env,row,currentSettings);
+   }catch(e){console.warn('Widget publish needs review: '+String(e?.message||e).slice(0,140));}
   const fresh=await getItem(env,String(row.id));
   await drfxWidgetUpdate(env,q,fresh);
  })();
